@@ -5,7 +5,7 @@ import Icon from "react-native-vector-icons/Ionicons";
 
 const cities = ["New Delhi", "Mumbai","New Delhi1", "Mumbai2",  "Bengaluru", "Chennai", "Kolkata", "Hyderabad"];
 
-const PickupCityScreen = ({ navigation }) => {
+const DropCityScreen = ({ navigation }) => {
   
   const [query, setQuery] = useState("");
   const [filteredCities, setFilteredCities] = useState([]);
@@ -21,7 +21,7 @@ const PickupCityScreen = ({ navigation }) => {
   const handleSelect = (city) => {
     setQuery(city);
     setFilteredCities([]);
-    navigation.navigate("Dropoff", { city });
+    navigation.navigate("SelectDate", { city });
   };
 
   return (
@@ -29,7 +29,7 @@ const PickupCityScreen = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
               <Icon name="arrow-back" size={24} />
             </TouchableOpacity>
-      <Text style={styles.label}>Select Pickup City</Text>
+      <Text style={styles.label}>Select Drop City</Text>
 
       <TextInput
         style={styles.input}
@@ -54,7 +54,7 @@ const PickupCityScreen = ({ navigation }) => {
   );
 };
 
-export default PickupCityScreen;
+export default DropCityScreen;
 
 const styles = StyleSheet.create({
   container: {

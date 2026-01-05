@@ -8,8 +8,10 @@ import {
   ScrollView,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+import { useNavigation } from "@react-navigation/native";
 
 const ProfileScreen = () => {
+  const navigation = useNavigation();
   const [user, setUser] = useState({
     name: "Ajay Kumar",
     email: "ajay@example.com",
@@ -17,19 +19,25 @@ const ProfileScreen = () => {
     avatar: "https://i.pravatar.cc/150?img=12",
   });
 
-  const menuOptions = [
-    { id: 1, title: "Edit Profile", icon: "person-outline" },
-    { id: 2, title: "Payment Methods", icon: "card-outline" },
-    { id: 3, title: "Ride History", icon: "time-outline" },
-    { id: 4, title: "Settings", icon: "settings-outline" },
-    { id: 5, title: "Help & Support", icon: "help-circle-outline" },
-    { id: 6, title: "Logout", icon: "log-out-outline" },
-  ];
+const menuOptions = [
+  { id: 1, title: "Edit Profile", icon: "person-outline", screen: "EditProfile" },
+  { id: 2, title: "Verify KYC", icon: "id-card-outline", screen: "KycDocuments" },
+  { id: 3, title: "Payment Methods", icon: "card-outline", screen: "EditProfile" },
+  { id: 4, title: "Ride History", icon: "time-outline", screen: "RideHistory" },
+  { id: 5, title: "Settings", icon: "settings-outline", screen: "Settings" },
+  { id: 6, title: "Help & Support", icon: "help-circle-outline", screen: "Settings" },
+  { id: 7, title: "Logout", icon: "log-out-outline" },
+];
+ 
 
-  const handleMenuPress = (option) => {
-    console.log(option.title + " clicked");
-    // navigate to respective screen here
-  };
+const handleMenuPress = (option) => {
+  if (option.title === "Logout") {
+    console.log("User Logged Out");
+    return;
+  }
+
+  navigation.navigate(option.screen);
+};
 
   return (
     <ScrollView style={styles.container}>
@@ -50,7 +58,7 @@ const ProfileScreen = () => {
             onPress={() => handleMenuPress(option)}
           >
             <View style={styles.menuIcon}>
-              <Icon name={option.icon} size={22} color="#0A84FF" />
+              <Icon name={option.icon} size={22} color="#f40b0f" />
             </View>
             <Text style={styles.menuText}>{option.title}</Text>
             <Icon name="chevron-forward-outline" size={20} color="#888" />
@@ -70,7 +78,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    backgroundColor: "#0A84FF",
+    backgroundColor: "#f40b0f",
     paddingVertical: 30,
     marginBottom: 20,
   },
