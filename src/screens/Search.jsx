@@ -41,6 +41,7 @@ const [date, setDate] = useState("Today");
             style={styles.input}
             value={from}
             onChangeText={setFrom}
+              placeholderTextColor="#131313"
           />
         </View>
 
@@ -54,6 +55,7 @@ const [date, setDate] = useState("Today");
             style={styles.input}
             value={to}
             onChangeText={setTo}
+            placeholderTextColor="#131313"
           />
         </View>
 
@@ -149,6 +151,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     marginVertical: 20,
+    
   },
   card: {
     backgroundColor: "#fff",
@@ -178,6 +181,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 15,
     flex: 1,
+    placeholderTextColor: "#0e0e0e"
   },
   text: {
     marginLeft: 12,
