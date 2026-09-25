@@ -15,14 +15,16 @@ import {
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import axios from 'axios';
-import * as Keychain from 'react-native-keychain';
 
+
+import { useAuth } from '../context/AuthContext';
 
 // import {
 //   LoginManager,
 //   AccessToken,
 // } from 'react-native-fbsdk-next';
 const Login = ({navigation}) => {
+const {login} = useAuth();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -33,50 +35,76 @@ const Login = ({navigation}) => {
   }, []);
 
   // Google Login
-  const handleGoogleLogin = async () => {
+const handleGoogleLogin = async () => {
   try {
-    // Check Google Play Services 
+    setLoading(true);
+
     await GoogleSignin.hasPlayServices({
       showPlayServicesUpdateDialog: true,
     });
 
+    // 1. Google Sign In
+    const userInfo = await GoogleSignin.signIn();
 
+    console.log('Google User:', userInfo);
 
-    // token 
-     const tokens = await GoogleSignin.getTokens();
-        //  console.log("Access Token:", tokens.accessToken);
-    // Google Sign In
-   
+    // 2. Get Google token
+    const tokens = await GoogleSignin.getTokens();
 
-    if (!tokens) {
-      Alert.alert('Login Failed', 'Unable to get Google user information.');
+    if (!tokens?.accessToken) {
+      Alert.alert(
+        'Login Failed',
+        'Unable to get Google access token.',
+      );
       return;
     }
 
-    console.log('Google accesstoken:', tokens.accessToken);
-    const payload={
+    console.log('Google Access Token:', tokens.accessToken);
+
+    // 3. Send token to backend
+    const payload = {
       access_token: tokens.accessToken,
       provider: 'google',
     };
-  const response = await axios.post(
-      `https://api.squarebigha.com/oldApi/api/v1/auth/social-login`,payload
+
+    const response = await axios.post(
+      'https://api.squarebigha.com/oldApi/api/v1/auth/social-login',
+      payload,
     );
-    console.log('Google login response:', response.data);
-const token = response.data.data.token;
-   if (!token) {
-      Alert.alert('Login Failed', 'Backend token not received.');
+
+    console.log(
+      'Google login response:',
+      response.data,
+    );
+
+    // 4. Backend token
+    const token = response?.data?.data?.token;
+
+    if (!token) {
+      Alert.alert(
+        'Login Failed',
+        'Backend token not received.',
+      );
       return;
     }
-await Keychain.setGenericPassword(
-  'authToken',
-  token
-);
-    // Login successful
-    navigation.navigate('Main');
-  } catch (error) {
-    console.log('Google Login Error:', error);
 
-    if (error?.code === 'SIGN_IN_CANCELLED') {
+    console.log('Backend Token Received');
+
+    // 5. IMPORTANT
+    // This updates AuthContext isLoggedIn = true
+    await login(token);
+
+    console.log('Google Login Successful');
+  } catch (error) {
+    console.log(
+      'Google Login Error:',
+      error?.response?.data || error,
+    );
+
+    if (
+      error?.code === 'SIGN_IN_CANCELLED' ||
+      error?.code === 'SIGN_IN_CANCELED'
+    ) {
       console.log('User cancelled Google login');
       return;
     }
@@ -85,6 +113,8 @@ await Keychain.setGenericPassword(
       'Google Login Failed',
       error?.message || 'Unable to login with Google',
     );
+  } finally {
+    setLoading(false);
   }
 };
 
@@ -109,16 +139,15 @@ const FACEBOOK_APP_ID = '1618522646309559';
 
   setLoading(true);
 
-   try {
+  try {
     console.log('Starting Facebook login...');
-    
+
     const permissions = ['public_profile'];
 
-    console.log('Facebook permissions:', permissions);
+    const result = await LoginManager.logInWithPermissions(
+      permissions,
+    );
 
-    const result = await LoginManager.logInWithPermissions(permissions);
-
-    
     console.log('Facebook login result:', result);
 
     if (result.isCancelled) {
@@ -126,21 +155,62 @@ const FACEBOOK_APP_ID = '1618522646309559';
       return;
     }
 
-    const data = await AccessToken.getCurrentAccessToken();
+    const tokens =
+      await AccessToken.getCurrentAccessToken();
 
-    console.log('Facebook access token:', data);
-
-    if (!data) {
-      throw new Error('Facebook access token not received');
-
+    if (!tokens?.accessToken) {
+      Alert.alert(
+        'Login Failed',
+        'Unable to get Facebook access token.',
+      );
+      return;
     }
-   // Login successful → Main screen
-    navigation.navigate('Main');
-    console.log('Facebook login successful');
+
+    console.log(
+      'Facebook Access Token:',
+      tokens.accessToken,
+    );
+
+    const payload = {
+      access_token: tokens.accessToken,
+      provider: 'facebook',
+    };
+
+    const response = await axios.post(
+      'https://api.squarebigha.com/oldApi/api/v1/auth/social-login',
+      payload,
+    );
+
+    console.log(
+      'Facebook login response:',
+      response.data,
+    );
+
+    const token = response?.data?.data?.token;
+
+    if (!token) {
+      Alert.alert(
+        'Login Failed',
+        'Backend token not received.',
+      );
+      return;
+    }
+
+    // IMPORTANT
+    await login(token);
+
+    console.log('Facebook Login Successful');
   } catch (error) {
-    console.error('FACEBOOK LOGIN ERROR:', error);
-  }
-   finally {
+    console.error(
+      'FACEBOOK LOGIN ERROR:',
+      error?.response?.data || error,
+    );
+
+    Alert.alert(
+      'Facebook Login Failed',
+      error?.message || 'Unable to login with Facebook',
+    );
+  } finally {
     setLoading(false);
   }
 };

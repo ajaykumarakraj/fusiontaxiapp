@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,7 +10,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/Ionicons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-
+import * as Keychain from 'react-native-keychain';
 const Home = () => {
   const [showPicker, setShowPicker] = useState(false);
 const [selectedDate, setSelectedDate] = useState(new Date());
@@ -137,6 +137,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000000ff",
     padding: 20,
+     paddingTop: 40,
   },
   image: {
    width: "80%",

@@ -1,7 +1,11 @@
-import { View, Text } from "react-native";
-import AppNavigator from "./src/navigators/AppNavigator"
+import React from 'react';
+import AppNavigator from './src/navigators/AppNavigator';
+import {AuthProvider} from './src/context/AuthContext';
+
 export default function App() {
   return (
-      <AppNavigator/>
+    <AuthProvider>
+      <AppNavigator />
+    </AuthProvider>
   );
 }

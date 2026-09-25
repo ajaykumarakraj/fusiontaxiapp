@@ -13,12 +13,14 @@ const Tab = createBottomTabNavigator();
 const TabNavigator = () => {
   return (
     <Tab.Navigator
+     initialRouteName="Profile"
       screenOptions={({ route }) => ({
+        
         headerShown: false,
         tabBarActiveTintColor: "#0A84FF",
         tabBarInactiveTintColor: "#999",
         tabBarStyle: {
-          height: 60,
+          height: 100,
           paddingBottom: 8,
         },
         tabBarIcon: ({ color, size }) => {
@@ -34,6 +36,7 @@ const TabNavigator = () => {
         },
       })}
     >
+      
       <Tab.Screen name="Search" component={Search} />
       <Tab.Screen name="Publish" component={PublishScreen} />
       <Tab.Screen name="Your Rides" component={RidesScreen} />

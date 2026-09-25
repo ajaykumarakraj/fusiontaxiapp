@@ -61,6 +61,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: "#f5f5f5",
+     paddingTop: 40,
   },
   label: {
     fontSize: 16,
