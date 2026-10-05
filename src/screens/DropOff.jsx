@@ -21,7 +21,7 @@ const DropCityScreen = ({ navigation }) => {
   const handleSelect = (city) => {
     setQuery(city);
     setFilteredCities([]);
-    navigation.navigate("SelectDate", { city });
+    navigation.navigate("RouteSelection", { city });
   };
 
   return (

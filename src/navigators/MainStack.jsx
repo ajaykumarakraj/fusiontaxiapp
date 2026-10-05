@@ -16,6 +16,7 @@ import SettingsScreen from "../screens/SettingsScreen"
 import TravelPreferences from "../screens/TravelPreferences"
 import MiniBioScreen from "../screens/MiniBioScreen"
 import AddVehicleScreen from "../screens/AddVehicleScreen"
+import RouteSelectionScreen from '../screens/RouteSelectionScreen'
 const Stack=createNativeStackNavigator()
 const MainStack = () => {
   return (
@@ -25,6 +26,7 @@ const MainStack = () => {
         <Stack.Screen name="RideList" component={RideList} />
         <Stack.Screen name="RideDetails" component={RideDetails} />
         <Stack.Screen name="Dropoff" component={DropOff}/>
+        <Stack.Screen name="RouteSelection" component={RouteSelectionScreen}/>
         <Stack.Screen name="SelectDate" component={SelectDateScreen}/>
         <Stack.Screen name="SelectPassenger" component={PassengerScreen}/>
         <Stack.Screen name="PricePerSeat" component={PricePerSeatScreen}/>
