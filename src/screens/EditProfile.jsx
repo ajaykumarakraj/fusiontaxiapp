@@ -380,28 +380,26 @@ const pickImage = async () => {
 
       {/* Avatar */}
       <View style={styles.avatarSection}>
-        <View style={styles.avatarWrapper}>
-         <Image
-  source={{uri: `https://api.squarebigha.com/storage/${profile.photo}`}}
-  style={styles.avatar}
-  resizeMode="cover"
-/>
-  {/* <Image
-    source={{uri: profileImage}}
-    style={styles.avatar}
-  /> */}
+         <View style={styles.avatarWrapper}>
+    <Image
+      source={{
+        uri: profileImage || profile?.photo,
+      }}
+      style={styles.avatar}
+      resizeMode="cover"
+    />
 
-
-       <TouchableOpacity
-  style={styles.cameraBtn}
-  onPress={pickImage}>
-  <Icon
-    name="camera"
-    size={18}
-    color="#fff"
-  />
-</TouchableOpacity>
-        </View>
+    <TouchableOpacity
+      style={styles.cameraBtn}
+      onPress={pickImage}
+    >
+      <Icon
+        name="camera"
+        size={18}
+        color="#fff"
+      />
+    </TouchableOpacity>
+  </View>
 
         <Text style={styles.changePhoto}>
           Change profile photo

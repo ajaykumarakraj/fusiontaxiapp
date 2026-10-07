@@ -53,7 +53,7 @@ const CITIES = [
   'Agra',
 ];
 
-const RouteSelectionScreen = ({navigation}) => {
+const RouteSelectionScreen = ({navigation, route}) => {
   const [fromCity, setFromCity] = useState('Delhi');
   const [toCity, setToCity] = useState('Aligarh');
 
@@ -66,6 +66,12 @@ const RouteSelectionScreen = ({navigation}) => {
 
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
+
+
+  const rideData = route?.params?.rideData || {};
+
+  console.log("city Data:", rideData);
+
 
   // --------------------------------------------------
   // Get route cities

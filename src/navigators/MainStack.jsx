@@ -17,6 +17,9 @@ import TravelPreferences from "../screens/TravelPreferences"
 import MiniBioScreen from "../screens/MiniBioScreen"
 import AddVehicleScreen from "../screens/AddVehicleScreen"
 import RouteSelectionScreen from '../screens/RouteSelectionScreen'
+import  SelectTimeScreen from '../screens/SelectTimeScreen'
+import ReviewRideScreen from '../screens/ReviewRideScreen'
+import SelectCarScreen from '../screens/SelectCars'
 const Stack=createNativeStackNavigator()
 const MainStack = () => {
   return (
@@ -34,9 +37,12 @@ const MainStack = () => {
         <Stack.Screen name="VerifyKYC" component={VerifyKYC} />
         <Stack.Screen name="KycDocuments" component={KycDocuments}/>
         <Stack.Screen name="Settings" component={SettingsScreen}/>
-        <Stack.Screen name="Travepreferences" component={TravelPreferences}/>
+        <Stack.Screen name="TravelPreferences" component={TravelPreferences}/>
         <Stack.Screen name='MiniBio' component={MiniBioScreen}/>
         <Stack.Screen name="AddVehicle" component={AddVehicleScreen}/>
+        <Stack.Screen name="SelectTime" component={SelectTimeScreen}/>
+        <Stack.Screen name="ReviewRide" component={ReviewRideScreen}/>
+        <Stack.Screen name="SelectCar" component={SelectCarScreen}/>
     </Stack.Navigator>
   )
 }

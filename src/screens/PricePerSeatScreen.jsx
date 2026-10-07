@@ -4,14 +4,21 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const MIN_PRICE = 50;
 const MAX_PRICE = 2000;
 const STEP = 50;
 
-const PricePerSeatScreen = ({ navigation }) => {
-  const [price, setPrice] = useState(300);
+const PricePerSeatScreen = ({ navigation, route }) => {
+  // Previous screens ka complete data
+  const rideData = route?.params?.rideData || {};
+
+  const [price, setPrice] = useState(
+    rideData?.pricePerSeat || 300
+  );
 
   const increasePrice = () => {
     if (price < MAX_PRICE) {
@@ -25,50 +32,171 @@ const PricePerSeatScreen = ({ navigation }) => {
     }
   };
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Set your price per seat</Text>
-      <Text style={styles.subtitle}>
-        Choose a fair price to attract passengers
-      </Text>
+  const handleContinue = () => {
+    const finalRideData = {
+      ...rideData,
+      pricePerSeat: price,
+    };
 
-      <View style={styles.priceBox}>
+    console.log('price Data:', finalRideData);
+
+    // Next screen
+    navigation.navigate('SelectCar', {
+      rideData: finalRideData,
+    });
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity
-          style={styles.adjustButton}
-          onPress={decreasePrice}
-          disabled={price <= MIN_PRICE}
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
         >
-          <Text style={styles.adjustText}>−</Text>
+          <Icon name="arrow-back" size={24} color="#222" />
         </TouchableOpacity>
 
-        <View style={styles.priceCenter}>
-          <Text style={styles.currency}>₹</Text>
-          <Text style={styles.price}>{price}</Text>
+        <Text style={styles.headerTitle}>
+          Price
+        </Text>
+
+        <View style={{ width: 42 }} />
+      </View>
+
+      <View style={styles.content}>
+
+        {/* Icon */}
+        <View style={styles.iconContainer}>
+          <Icon
+            name="cash-outline"
+            size={42}
+            color="#1976D2"
+          />
         </View>
 
+        <Text style={styles.title}>
+          Set your price per seat
+        </Text>
+
+        <Text style={styles.subtitle}>
+          Choose a fair price to attract passengers
+        </Text>
+
+        {/* Price Box */}
+        <View style={styles.priceBox}>
+
+          {/* Minus */}
+          <TouchableOpacity
+            style={[
+              styles.adjustButton,
+              price <= MIN_PRICE &&
+                styles.disabledAdjustButton,
+            ]}
+            onPress={decreasePrice}
+            disabled={price <= MIN_PRICE}
+          >
+            <Text
+              style={[
+                styles.adjustText,
+                price <= MIN_PRICE &&
+                  styles.disabledAdjustText,
+              ]}
+            >
+              −
+            </Text>
+          </TouchableOpacity>
+
+          {/* Price */}
+          <View style={styles.priceCenter}>
+            <Text style={styles.currency}>₹</Text>
+
+            <Text style={styles.price}>
+              {price}
+            </Text>
+
+            <Text style={styles.perSeat}>
+              / seat
+            </Text>
+          </View>
+
+          {/* Plus */}
+          <TouchableOpacity
+            style={[
+              styles.adjustButton,
+              price >= MAX_PRICE &&
+                styles.disabledAdjustButton,
+            ]}
+            onPress={increasePrice}
+            disabled={price >= MAX_PRICE}
+          >
+            <Text
+              style={[
+                styles.adjustText,
+                price >= MAX_PRICE &&
+                  styles.disabledAdjustText,
+              ]}
+            >
+              +
+            </Text>
+          </TouchableOpacity>
+
+        </View>
+
+        {/* Helper */}
+        <View style={styles.helperContainer}>
+          <Icon
+            name="information-circle-outline"
+            size={18}
+            color="#777"
+          />
+
+          <Text style={styles.helperText}>
+            Min ₹{MIN_PRICE} • Max ₹{MAX_PRICE} •
+            Step ₹{STEP}
+          </Text>
+        </View>
+
+        {/* Passenger Info */}
+        {rideData?.passengers && (
+          <View style={styles.infoCard}>
+            <Icon
+              name="people-outline"
+              size={22}
+              color="#1976D2"
+            />
+
+            <Text style={styles.infoText}>
+              {rideData.passengers}{' '}
+              {rideData.passengers === 1
+                ? 'passenger'
+                : 'passengers'}
+            </Text>
+          </View>
+        )}
+
+      </View>
+
+      {/* Continue */}
+      <View style={styles.bottomContainer}>
         <TouchableOpacity
-          style={styles.adjustButton}
-          onPress={increasePrice}
-          disabled={price >= MAX_PRICE}
+          style={styles.continueButton}
+          onPress={handleContinue}
         >
-          <Text style={styles.adjustText}>+</Text>
+          <Text style={styles.continueText}>
+            Continue
+          </Text>
+
+          <Icon
+            name="arrow-forward"
+            size={20}
+            color="#fff"
+          />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.helperText}>
-        Min ₹{MIN_PRICE} • Max ₹{MAX_PRICE}
-      </Text>
-
-      <TouchableOpacity
-        style={styles.continueButton}
-        onPress={() => {
-          // navigation.navigate('NextScreen', { pricePerSeat: price });
-          console.log('Price per seat:', price);
-        }}
-      >
-        <Text style={styles.continueText}>Continue</Text>
-      </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -77,75 +205,181 @@ export default PricePerSeatScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 24,
-    justifyContent: 'center',
+    backgroundColor: '#F7F9FC',
   },
+
+  header: {
+    height: 60,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#F1F3F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  headerTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#222',
+  },
+
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 45,
+  },
+
+  iconContainer: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: '#EAF3FF',
+    alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+
   title: {
     fontSize: 24,
     fontWeight: '700',
     color: '#111',
     textAlign: 'center',
-    marginBottom: 6,
   },
+
   subtitle: {
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+    marginTop: 8,
     marginBottom: 40,
   },
+
   priceBox: {
+    height: 130,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#DDE2E8',
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 20,
+    paddingHorizontal: 18,
+    elevation: 2,
   },
+
   adjustButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#ccc',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#EAF3FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  adjustText: {
-    fontSize: 26,
-    fontWeight: '600',
+
+  disabledAdjustButton: {
+    backgroundColor: '#F0F1F2',
   },
+
+  adjustText: {
+    fontSize: 28,
+    fontWeight: '600',
+    color: '#1976D2',
+    lineHeight: 30,
+  },
+
+  disabledAdjustText: {
+    color: '#aaa',
+  },
+
   priceCenter: {
     flexDirection: 'row',
     alignItems: 'flex-end',
   },
+
   currency: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '600',
-    marginRight: 4,
+    color: '#222',
+    marginRight: 3,
+    marginBottom: 6,
   },
+
   price: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#000',
+    fontSize: 40,
+    fontWeight: '800',
+    color: '#1976D2',
   },
-  helperText: {
-    textAlign: 'center',
+
+  perSeat: {
+    fontSize: 13,
     color: '#777',
-    marginTop: 12,
+    marginLeft: 5,
+    marginBottom: 8,
   },
-  continueButton: {
-    marginTop: 50,
-    backgroundColor: '#000',
-    paddingVertical: 14,
-    borderRadius: 12,
+
+  helperContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 14,
   },
+
+  helperText: {
+    color: '#777',
+    fontSize: 13,
+    marginLeft: 5,
+  },
+
+  infoCard: {
+    marginTop: 30,
+    padding: 15,
+    borderRadius: 14,
+    backgroundColor: '#EAF3FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  infoText: {
+    marginLeft: 8,
+    color: '#1976D2',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+
+  bottomContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+
+  continueButton: {
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: '#1976D2',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+
   continueText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
