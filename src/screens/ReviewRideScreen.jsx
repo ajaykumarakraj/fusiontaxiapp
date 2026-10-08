@@ -29,7 +29,10 @@ const ReviewRide = ({ navigation, route }) => {
 
   const handlePostRide = async () => {
     console.log('Review DATA:',rideData.date);
-  const credentials = await Keychain.getGenericPassword();
+ 
+    // Yahan API call karna hai
+try{
+   const credentials = await Keychain.getGenericPassword();
 
     if (!credentials) {
       Alert.alert('Session Expired', 'Please login again.');
@@ -37,11 +40,9 @@ const ReviewRide = ({ navigation, route }) => {
     }
 console.log('Credentials:', credentials);
     const token = credentials.password;
-    // Yahan API call karna hai
-try{
   const payload={
-    vehicle_id:3,
-    driver_id:4,
+    vehicle_id:rideData.car.id,
+    driver_id:rideData.car.user_id,
     from_address:rideData.pickupLocation.formatted_address,
     from_latitude:rideData.pickupLocation.latitude,
     from_longitude:rideData.pickupLocation.longitude,
@@ -63,7 +64,7 @@ try{
   console.log('post Payload:', payload);
 const response = await axios.post(' https://api.squarebigha.com/oldApi/api/v1/rides',payload, {
   headers:{
-    Authentication:`Bearer ${token}`,
+    Authorization:`Bearer ${token}`,
   }
 })
 console.log('Ride posted successfully:', response.data);

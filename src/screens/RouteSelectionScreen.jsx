@@ -1,4 +1,10 @@
-import React, {useMemo, useState} from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+
 import {
   SafeAreaView,
   View,
@@ -8,111 +14,526 @@ import {
   ScrollView,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 
+import MapView, {
+  Marker,
+  Polyline,
+} from 'react-native-maps';
+
+import axios from 'axios';
+import * as Keychain from 'react-native-keychain';
+import polyline from '@mapbox/polyline';
+
+const API_URL =
+  'https://api.squarebigha.com/oldApi/api/v1';
+
+
 // --------------------------------------------------
-// Sample route data
-// Later you can replace this with API data
+// FORMAT ADDRESS
 // --------------------------------------------------
 
-const ROUTES = {
-  'Delhi-Aligarh': [
-    {id: 1, name: 'Ghaziabad'},
-    {id: 2, name: 'Dadri'},
-    {id: 3, name: 'Sikandrabad'},
-    {id: 4, name: 'Bulandshahr'},
-    {id: 5, name: 'Khurja'},
-  ],
+const getAddress = location => {
+  if (!location) {
+    return '';
+  }
 
-  'Delhi-Agra': [
-    {id: 1, name: 'Ghaziabad'},
-    {id: 2, name: 'Noida'},
-    {id: 3, name: 'Greater Noida'},
-    {id: 4, name: 'Mathura'},
-  ],
-
-  'Noida-Aligarh': [
-    {id: 1, name: 'Greater Noida'},
-    {id: 2, name: 'Sikandrabad'},
-    {id: 3, name: 'Bulandshahr'},
-    {id: 4, name: 'Khurja'},
-  ],
+  return (
+    location.formatted_address ||
+    location.address ||
+    location.name ||
+    ''
+  );
 };
 
-const CITIES = [
-  'Delhi',
-  'Noida',
-  'Ghaziabad',
-  'Greater Noida',
-  'Dadri',
-  'Sikandrabad',
-  'Bulandshahr',
-  'Khurja',
-  'Aligarh',
-  'Mathura',
-  'Agra',
-];
 
-const RouteSelectionScreen = ({navigation, route}) => {
-  const [fromCity, setFromCity] = useState('Delhi');
-  const [toCity, setToCity] = useState('Aligarh');
+// --------------------------------------------------
+// SCREEN
+// --------------------------------------------------
 
-  // Selected intermediate cities
-  const [selectedCities, setSelectedCities] = useState([
-    'Ghaziabad',
-    'Sikandrabad',
-    'Bulandshahr',
-  ]);
-
-  const [showFromDropdown, setShowFromDropdown] = useState(false);
-  const [showToDropdown, setShowToDropdown] = useState(false);
-
+const RouteSelectionScreen = ({
+  navigation,
+  route,
+}) => {
+  // --------------------------------------------------
+  // RIDE DATA
+  // --------------------------------------------------
 
   const rideData = route?.params?.rideData || {};
+console.log('Ride Data:', rideData);
+  const pickupLocation =
+    rideData?.pickupLocation || null;
 
-  console.log("city Data:", rideData);
+
+  const dropLocation =
+    rideData?.dropLocation || null;
+
+
+  // --------------------------------------------------
+  // MAP REF
+  // --------------------------------------------------
+
+  const mapRef = useRef(null);
 
 
   // --------------------------------------------------
-  // Get route cities
+  // STATE
   // --------------------------------------------------
 
-  const routeCities = useMemo(() => {
-    const key = `${fromCity}-${toCity}`;
+  const [fromCity, setFromCity] = useState('');
 
-    return ROUTES[key] || [];
-  }, [fromCity, toCity]);
+  const [toCity, setToCity] = useState('');
+
+  const [selectedCities, setSelectedCities] =
+    useState([]);
+
+  const [routeCities, setRouteCities] =
+    useState([]);
+
+  const [routeData, setRouteData] =
+    useState(null);
+
+  const [loadingRoute, setLoadingRoute] =
+    useState(false);
+
+  const [showFromDropdown, setShowFromDropdown] =
+    useState(false);
+
+  const [showToDropdown, setShowToDropdown] =
+    useState(false);
+
 
   // --------------------------------------------------
-  // Check selected
+  // INITIAL SOURCE / DESTINATION
+  // --------------------------------------------------
+
+  useEffect(() => {
+    const pickupAddress =
+      getAddress(pickupLocation);
+
+    const dropAddress =
+      getAddress(dropLocation);
+
+    setFromCity(pickupAddress);
+    setToCity(dropAddress);
+  }, [
+    pickupLocation?.latitude,
+    pickupLocation?.longitude,
+    dropLocation?.latitude,
+    dropLocation?.longitude,
+  ]);
+
+
+  // --------------------------------------------------
+  // GET ROUTE
+  // --------------------------------------------------
+
+  useEffect(() => {
+    if (!pickupLocation || !dropLocation) {
+      return;
+    }
+
+    getRouteCities();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    pickupLocation?.latitude,
+    pickupLocation?.longitude,
+    dropLocation?.latitude,
+    dropLocation?.longitude,
+  ]);
+
+
+  // --------------------------------------------------
+  // GET ROUTE FROM API
+  // --------------------------------------------------
+
+  const getRouteCities = async () => {
+    try {
+      const credentials =
+        await Keychain.getGenericPassword();
+
+      if (!credentials) {
+        Alert.alert(
+          'Session Expired',
+          'Please login again.',
+        );
+
+        return;
+      }
+
+
+      // ------------------------------------------------
+      // CHECK PICKUP COORDINATES
+      // ------------------------------------------------
+
+      if (
+        pickupLocation?.latitude == null ||
+        pickupLocation?.longitude == null
+      ) {
+        Alert.alert(
+          'Pickup Location Error',
+          'Pickup latitude or longitude is missing.',
+        );
+
+        return;
+      }
+
+
+      // ------------------------------------------------
+      // CHECK DESTINATION COORDINATES
+      // ------------------------------------------------
+
+      if (
+        dropLocation?.latitude == null ||
+        dropLocation?.longitude == null
+      ) {
+        Alert.alert(
+          'Destination Error',
+          'Destination latitude or longitude is missing.',
+        );
+
+        return;
+      }
+
+
+      // ------------------------------------------------
+      // TOKEN
+      // ------------------------------------------------
+
+      const token = credentials.password;
+
+
+      // ------------------------------------------------
+      // PAYLOAD
+      // ------------------------------------------------
+
+      const payload = {
+        source: {
+          address:
+            getAddress(pickupLocation),
+
+          latitude: Number(
+            pickupLocation.latitude,
+          ),
+
+          longitude: Number(
+            pickupLocation.longitude,
+          ),
+
+          place_id:
+            pickupLocation.place_id || null,
+        },
+
+        destination: {
+          address:
+            getAddress(dropLocation),
+
+          latitude: Number(
+            dropLocation.latitude,
+          ),
+
+          longitude: Number(
+            dropLocation.longitude,
+          ),
+
+          place_id:
+            dropLocation.place_id || null,
+        },
+      };
+
+
+      console.log(
+        '================================',
+      );
+
+      console.log(
+        'ROUTE PAYLOAD:',
+        payload,
+      );
+
+      console.log(
+        '================================',
+      );
+
+
+      setLoadingRoute(true);
+
+
+      // ------------------------------------------------
+      // API CALL
+      // ------------------------------------------------
+
+      const response = await axios.post(
+        `${API_URL}/rides/route`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+
+      console.log(
+        'ROUTE API RESPONSE:',
+        response.data,
+      );
+
+
+      // ------------------------------------------------
+      // SUCCESS CHECK
+      // ------------------------------------------------
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message ||
+          'Unable to calculate route.',
+        );
+      }
+
+
+      const data =
+        response.data?.data;
+
+
+      if (!data) {
+        throw new Error(
+          'Route data was not returned by API.',
+        );
+      }
+
+
+      // ------------------------------------------------
+      // SAVE ROUTE DATA
+      // ------------------------------------------------
+
+      setRouteData(data);
+
+
+      // ------------------------------------------------
+      // SOURCE / DESTINATION
+      // ------------------------------------------------
+
+      setFromCity(
+        getAddress(pickupLocation),
+      );
+
+      setToCity(
+        getAddress(dropLocation),
+      );
+
+
+      // ------------------------------------------------
+      // ROUTE CITIES
+      // ------------------------------------------------
+
+      const cities =
+        data?.cities || [];
+
+
+      setRouteCities(cities);
+
+
+      // Initially select all cities.
+      setSelectedCities(
+        cities.map(city => city.name),
+      );
+
+
+      console.log(
+        'ROUTE CITIES:',
+        data.cities,
+      );
+
+      console.log(
+        'DISTANCE:',
+        data.distance_km,
+      );
+
+      console.log(
+        'DURATION:',
+        data.duration_seconds,
+      );
+
+    } catch (error) {
+      console.error(
+        '================================',
+      );
+
+      console.error(
+        'ROUTE STATUS:',
+        error.response?.status,
+      );
+
+      console.error(
+        'ROUTE DATA:',
+        error.response?.data,
+      );
+
+      console.error(
+        'ROUTE ERROR:',
+        error.message,
+      );
+
+      console.error(
+        '================================',
+      );
+
+
+      Alert.alert(
+        'Route Error',
+        error.response?.data?.message ||
+        error.message ||
+        'Unable to calculate route.',
+      );
+
+    } finally {
+      setLoadingRoute(false);
+    }
+  };
+
+
+  // --------------------------------------------------
+  // DECODE GOOGLE POLYLINE
+  // --------------------------------------------------
+
+  const routeCoordinates = useMemo(() => {
+    if (!routeData?.polyline) {
+      return [];
+    }
+
+    try {
+      const decoded =
+        polyline.decode(
+          routeData.polyline,
+        );
+
+      return decoded.map(
+        ([latitude, longitude]) => ({
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+        }),
+      );
+
+    } catch (error) {
+      console.error(
+        'POLYLINE DECODE ERROR:',
+        error,
+      );
+
+      return [];
+    }
+  }, [routeData?.polyline]);
+
+
+  // --------------------------------------------------
+  // FIT MAP TO ROUTE
+  // --------------------------------------------------
+
+  useEffect(() => {
+    if (
+      !mapRef.current ||
+      routeCoordinates.length === 0
+    ) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      try {
+        mapRef.current.fitToCoordinates(
+          routeCoordinates,
+          {
+            edgePadding: {
+              top: 50,
+              right: 50,
+              bottom: 50,
+              left: 50,
+            },
+            animated: true,
+          },
+        );
+      } catch (error) {
+        console.log(
+          'MAP FIT ERROR:',
+          error,
+        );
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [routeCoordinates]);
+
+
+  // --------------------------------------------------
+  // FORMAT DURATION
+  // --------------------------------------------------
+
+  const formattedDuration = useMemo(() => {
+    if (!routeData?.duration_seconds) {
+      return '--';
+    }
+
+    const totalSeconds =
+      Number(routeData.duration_seconds);
+
+    const hours = Math.floor(
+      totalSeconds / 3600,
+    );
+
+    const minutes = Math.floor(
+      (totalSeconds % 3600) / 60,
+    );
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+
+    return `${minutes}m`;
+  }, [routeData?.duration_seconds]);
+
+
+  // --------------------------------------------------
+  // SELECTED CHECK
   // --------------------------------------------------
 
   const isSelected = cityName => {
     return selectedCities.includes(cityName);
   };
 
+
   // --------------------------------------------------
-  // Add city
+  // ADD CITY
   // --------------------------------------------------
 
   const addCity = cityName => {
     if (!selectedCities.includes(cityName)) {
-      setSelectedCities(prev => [...prev, cityName]);
+      setSelectedCities(prev => [
+        ...prev,
+        cityName,
+      ]);
     }
   };
 
+
   // --------------------------------------------------
-  // Remove city
+  // REMOVE CITY
   // --------------------------------------------------
 
   const removeCity = cityName => {
     setSelectedCities(prev =>
-      prev.filter(city => city !== cityName),
+      prev.filter(
+        city => city !== cityName,
+      ),
     );
   };
 
+
   // --------------------------------------------------
-  // Change From City
+  // CHANGE FROM
   // --------------------------------------------------
 
   const changeFromCity = city => {
@@ -121,18 +542,20 @@ const RouteSelectionScreen = ({navigation, route}) => {
         'Invalid Route',
         'From and To city cannot be same.',
       );
+
       return;
     }
 
     setFromCity(city);
+
     setShowFromDropdown(false);
 
-    // Reset selected cities
     setSelectedCities([]);
   };
 
+
   // --------------------------------------------------
-  // Change To City
+  // CHANGE TO
   // --------------------------------------------------
 
   const changeToCity = city => {
@@ -141,44 +564,126 @@ const RouteSelectionScreen = ({navigation, route}) => {
         'Invalid Route',
         'From and To city cannot be same.',
       );
+
       return;
     }
 
     setToCity(city);
+
     setShowToDropdown(false);
 
-    // Reset selected cities
     setSelectedCities([]);
   };
 
+
   // --------------------------------------------------
-  // Continue
+  // CONTINUE
   // --------------------------------------------------
 
   const handleContinue = () => {
-    const route = {
+    if (!fromCity || !toCity) {
+      Alert.alert(
+        'Route Required',
+        'Please select pickup and destination.',
+      );
+
+      return;
+    }
+
+
+    if (loadingRoute) {
+      Alert.alert(
+        'Please Wait',
+        'Route is still being calculated.',
+      );
+
+      return;
+    }
+
+
+    if (!routeData) {
+      Alert.alert(
+        'Route Required',
+        'Please wait until the route is calculated.',
+      );
+
+      return;
+    }
+
+
+    // ------------------------------------------------
+    // SELECTED CITY OBJECTS
+    // ------------------------------------------------
+
+    const selectedStopObjects =
+      routeCities.filter(city =>
+        selectedCities.includes(city.name),
+      );
+
+
+    // ------------------------------------------------
+    // FINAL ROUTE
+    // ------------------------------------------------
+
+    const finalRoute = {
       from: fromCity,
-      stops: selectedCities,
+
       to: toCity,
+
+      stops: selectedCities,
+
+      stopDetails: selectedStopObjects,
+
+      distance_km:
+        routeData.distance_km,
+
+      distance_meters:
+        routeData.distance_meters,
+
+      duration:
+        routeData.duration,
+
+      duration_seconds:
+        routeData.duration_seconds,
+
+      polyline:
+        routeData.polyline,
+
+      route_cities:
+        routeCities,
     };
 
-    console.log('FINAL ROUTE:', route);
 
-    Alert.alert(
-      'Route Selected',
-      `${fromCity} → ${selectedCities.join(
-        ' → ',
-      )} → ${toCity}`,
+    console.log(
+      '================================',
     );
 
-    // Example:
-    navigation.navigate('SelectDate', {
-      routeData: route,
-    });
+    console.log(
+      'FINAL ROUTE:',
+      finalRoute,
+    );
+
+    console.log(
+      '================================',
+    );
+
+
+    // ------------------------------------------------
+    // NEXT SCREEN
+    // ------------------------------------------------
+
+    navigation.navigate(
+      'SelectDate',
+      {
+        routeData: finalRoute,
+        rideData: rideData,
+      },
+    );
   };
 
+
   // --------------------------------------------------
-  // Render city dropdown
+  // RENDER CITY DROPDOWN
   // --------------------------------------------------
 
   const renderCityDropdown = (
@@ -191,382 +696,1022 @@ const RouteSelectionScreen = ({navigation, route}) => {
       return null;
     }
 
+    const cities = [];
+
+    if (fromCity) {
+      cities.push(fromCity);
+    }
+
+    if (
+      toCity &&
+      toCity !== fromCity
+    ) {
+      cities.push(toCity);
+    }
+
     return (
       <View style={styles.dropdown}>
         <ScrollView
           nestedScrollEnabled
           showsVerticalScrollIndicator={false}
-          style={styles.dropdownScroll}>
-          {CITIES.map(city => (
-            <TouchableOpacity
-              key={city}
-              style={[
-                styles.dropdownItem,
-                city === selectedCity &&
-                  styles.selectedDropdownItem,
-              ]}
-              onPress={() => {
-                onSelect(city);
-                closeDropdown();
-              }}>
-              <Text
+          style={styles.dropdownScroll}
+        >
+          {cities.map(
+            (city, index) => (
+              <TouchableOpacity
+                key={`${city}-${index}`}
                 style={[
-                  styles.dropdownText,
+                  styles.dropdownItem,
                   city === selectedCity &&
+                  styles.selectedDropdownItem,
+                ]}
+                onPress={() => {
+                  onSelect(city);
+                  closeDropdown();
+                }}
+              >
+                <Text
+                  style={[
+                    styles.dropdownText,
+                    city === selectedCity &&
                     styles.selectedDropdownText,
-                ]}>
-                {city}
-              </Text>
+                  ]}
+                >
+                  {city}
+                </Text>
 
-              {city === selectedCity && (
-                <Text style={styles.checkIcon}>✓</Text>
-              )}
-            </TouchableOpacity>
-          ))}
+                {city === selectedCity && (
+                  <Text
+                    style={
+                      styles.checkIcon
+                    }
+                  >
+                    ✓
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ),
+          )}
         </ScrollView>
       </View>
     );
   };
 
+
+  // --------------------------------------------------
+  // MAP REGION
+  // --------------------------------------------------
+
+  const mapInitialRegion = useMemo(() => {
+    if (
+      pickupLocation?.latitude == null ||
+      pickupLocation?.longitude == null
+    ) {
+      return {
+        latitude: 20.5937,
+        longitude: 78.9629,
+        latitudeDelta: 5,
+        longitudeDelta: 5,
+      };
+    }
+
+    return {
+      latitude: Number(
+        pickupLocation.latitude,
+      ),
+
+      longitude: Number(
+        pickupLocation.longitude,
+      ),
+
+      latitudeDelta: 1,
+      longitudeDelta: 1,
+    };
+  }, [
+    pickupLocation?.latitude,
+    pickupLocation?.longitude,
+  ]);
+
+
+  // --------------------------------------------------
+  // RENDER
+  // --------------------------------------------------
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <StatusBar
         barStyle="dark-content"
         backgroundColor="#FFFFFF"
       />
+
 
       {/* HEADER */}
 
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation?.goBack?.()}>
-          <Text style={styles.backIcon}>‹</Text>
+          onPress={() =>
+            navigation?.goBack?.()
+          }
+        >
+          <Text
+            style={styles.backIcon}
+          >
+            ‹
+          </Text>
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>
+        <Text
+          style={styles.headerTitle}
+        >
           Select Route
         </Text>
 
-        <View style={styles.headerRight} />
+        <View
+          style={styles.headerRight}
+        />
       </View>
+
+
+      {/* CONTENT */}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}>
+        contentContainerStyle={
+          styles.content
+        }
+      >
+
         {/* ROUTE SELECTOR */}
 
-        <Text style={styles.sectionTitle}>
+        <Text
+          style={styles.sectionTitle}
+        >
           Select Route
         </Text>
 
+
         {/* FROM */}
 
-        <View style={styles.inputWrapper}>
-          <Text style={styles.inputLabel}>From City</Text>
+        <View
+          style={styles.inputWrapper}
+        >
+          <Text
+            style={styles.inputLabel}
+          >
+            From City
+          </Text>
 
           <TouchableOpacity
             activeOpacity={0.8}
             style={styles.cityInput}
             onPress={() => {
-              setShowFromDropdown(!showFromDropdown);
+              setShowFromDropdown(
+                !showFromDropdown,
+              );
+
               setShowToDropdown(false);
-            }}>
-            <View style={styles.cityLeft}>
-              <View style={styles.locationCircle}>
-                <Text style={styles.locationText}>A</Text>
+            }}
+          >
+            <View
+              style={styles.cityLeft}
+            >
+              <View
+                style={
+                  styles.locationCircle
+                }
+              >
+                <Text
+                  style={
+                    styles.locationText
+                  }
+                >
+                  A
+                </Text>
               </View>
 
-              <Text style={styles.cityText}>
-                {fromCity}
+              <Text
+                style={styles.cityText}
+                numberOfLines={2}
+              >
+                {fromCity || 'Pickup'}
               </Text>
             </View>
 
-            <Text style={styles.arrow}>⌄</Text>
+            <Text
+              style={styles.arrow}
+            >
+              ⌄
+            </Text>
           </TouchableOpacity>
 
           {renderCityDropdown(
             showFromDropdown,
             fromCity,
             changeFromCity,
-            () => setShowFromDropdown(false),
+            () =>
+              setShowFromDropdown(false),
           )}
         </View>
 
-        {/* ROUTE ARROW */}
 
-        <View style={styles.smallRouteLine}>
-          <View style={styles.verticalLine} />
+        {/* ROUTE LINE */}
+
+        <View
+          style={styles.smallRouteLine}
+        >
+          <View
+            style={styles.verticalLine}
+          />
         </View>
+
 
         {/* TO */}
 
-        <View style={styles.inputWrapper}>
-          <Text style={styles.inputLabel}>To City</Text>
+        <View
+          style={styles.inputWrapper}
+        >
+          <Text
+            style={styles.inputLabel}
+          >
+            To City
+          </Text>
 
           <TouchableOpacity
             activeOpacity={0.8}
             style={styles.cityInput}
             onPress={() => {
-              setShowToDropdown(!showToDropdown);
+              setShowToDropdown(
+                !showToDropdown,
+              );
+
               setShowFromDropdown(false);
-            }}>
-            <View style={styles.cityLeft}>
-              <View style={styles.locationCircle}>
-                <Text style={styles.locationText}>B</Text>
+            }}
+          >
+            <View
+              style={styles.cityLeft}
+            >
+              <View
+                style={
+                  styles.locationCircle
+                }
+              >
+                <Text
+                  style={
+                    styles.locationText
+                  }
+                >
+                  B
+                </Text>
               </View>
 
-              <Text style={styles.cityText}>
-                {toCity}
+              <Text
+                style={styles.cityText}
+                numberOfLines={2}
+              >
+                {toCity || 'Destination'}
               </Text>
             </View>
 
-            <Text style={styles.arrow}>⌄</Text>
+            <Text
+              style={styles.arrow}
+            >
+              ⌄
+            </Text>
           </TouchableOpacity>
 
           {renderCityDropdown(
             showToDropdown,
             toCity,
             changeToCity,
-            () => setShowToDropdown(false),
+            () =>
+              setShowToDropdown(false),
           )}
         </View>
 
+
+        {/* LOADING */}
+
+        {loadingRoute && (
+          <View
+            style={styles.loadingBox}
+          >
+            <ActivityIndicator
+              size="small"
+              color="#2878E8"
+            />
+
+            <Text
+              style={styles.loadingText}
+            >
+              Calculating route...
+            </Text>
+          </View>
+        )}
+
+
+        {/* ROUTE INFORMATION */}
+
+        {routeData &&
+          !loadingRoute && (
+            <View
+              style={
+                styles.routeInfoCard
+              }
+            >
+              <View
+                style={
+                  styles.routeInfoItem
+                }
+              >
+                <Text
+                  style={
+                    styles.routeInfoLabel
+                  }
+                >
+                  Distance
+                </Text>
+
+                <Text
+                  style={
+                    styles.routeInfoValue
+                  }
+                >
+                  {routeData.distance_km} km
+                </Text>
+              </View>
+
+              <View
+                style={
+                  styles.routeInfoDivider
+                }
+              />
+
+              <View
+                style={
+                  styles.routeInfoItem
+                }
+              >
+                <Text
+                  style={
+                    styles.routeInfoLabel
+                  }
+                >
+                  Estimated Time
+                </Text>
+
+                <Text
+                  style={
+                    styles.routeInfoValue
+                  }
+                >
+                  {formattedDuration}
+                </Text>
+              </View>
+            </View>
+          )}
+
+
+        {/* MAP */}
+
+        {routeData &&
+          routeCoordinates.length > 0 && (
+            <View
+              style={styles.mapCard}
+            >
+              <View
+                style={styles.mapHeader}
+              >
+                <Text
+                  style={styles.mapTitle}
+                >
+                  Route Preview
+                </Text>
+
+                <Text
+                  style={styles.mapSubtitle}
+                >
+                  {routeData.distance_km} km
+                </Text>
+              </View>
+
+              <MapView
+                ref={mapRef}
+                style={styles.map}
+                initialRegion={
+                  mapInitialRegion
+                }
+                showsUserLocation={false}
+                showsMyLocationButton={false}
+                loadingEnabled
+              >
+
+                {/* PICKUP */}
+
+                <Marker
+                  coordinate={{
+                    latitude: Number(
+                      pickupLocation.latitude,
+                    ),
+                    longitude: Number(
+                      pickupLocation.longitude,
+                    ),
+                  }}
+                  title="Pickup"
+                  description={
+                    getAddress(
+                      pickupLocation,
+                    )
+                  }
+                />
+
+
+                {/* ROUTE */}
+
+                <Polyline
+                  coordinates={
+                    routeCoordinates
+                  }
+                  strokeWidth={5}
+                  strokeColor="#2878E8"
+                />
+
+
+                {/* INTERMEDIATE CITIES */}
+
+                {routeCities.map(
+                  (city, index) => {
+                    const latitude =
+                      Number(
+                        city.latitude,
+                      );
+
+                    const longitude =
+                      Number(
+                        city.longitude,
+                      );
+
+                    if (
+                      !Number.isFinite(
+                        latitude,
+                      ) ||
+                      !Number.isFinite(
+                        longitude,
+                      )
+                    ) {
+                      return null;
+                    }
+
+                    return (
+                      <Marker
+                        key={
+                          city.id ??
+                          `${city.name}-${index}`
+                        }
+                        coordinate={{
+                          latitude,
+                          longitude,
+                        }}
+                        title={
+                          city.name
+                        }
+                      />
+                    );
+                  },
+                )}
+
+
+                {/* DESTINATION */}
+
+                <Marker
+                  coordinate={{
+                    latitude: Number(
+                      dropLocation.latitude,
+                    ),
+                    longitude: Number(
+                      dropLocation.longitude,
+                    ),
+                  }}
+                  title="Destination"
+                  description={
+                    getAddress(
+                      dropLocation,
+                    )
+                  }
+                />
+
+              </MapView>
+            </View>
+          )}
+
+
         {/* CITIES */}
 
-        <View style={styles.citySectionHeader}>
+        <View
+          style={
+            styles.citySectionHeader
+          }
+        >
           <View>
-            <Text style={styles.sectionTitle}>
+            <Text
+              style={styles.sectionTitle}
+            >
               Cities on Route
             </Text>
 
-            <Text style={styles.sectionSubtitle}>
-              Add or remove cities from your route
+            <Text
+              style={
+                styles.sectionSubtitle
+              }
+            >
+              Add or remove cities from
+              your route
             </Text>
           </View>
 
-          <View style={styles.countBadge}>
-            <Text style={styles.countText}>
+          <View
+            style={styles.countBadge}
+          >
+            <Text
+              style={styles.countText}
+            >
               {selectedCities.length}
             </Text>
           </View>
         </View>
 
-        {/* ROUTE */}
 
-        <View style={styles.routeContainer}>
-          {/* START CITY */}
+        {/* ROUTE TIMELINE */}
 
-          <View style={styles.routeRow}>
-            <View style={styles.timeline}>
-              <View style={styles.startDot} />
-              <View style={styles.timelineLine} />
+        <View
+          style={styles.routeContainer}
+        >
+
+          {/* START */}
+
+          <View
+            style={styles.routeRow}
+          >
+            <View
+              style={styles.timeline}
+            >
+              <View
+                style={styles.startDot}
+              />
+
+              {routeCities.length >
+                0 && (
+                  <View
+                    style={
+                      styles.timelineLine
+                    }
+                  />
+                )}
             </View>
 
-            <View style={styles.routeCityCard}>
-              <Text style={styles.startLabel}>
+            <View
+              style={
+                styles.routeCityCard
+              }
+            >
+              <Text
+                style={styles.startLabel}
+              >
                 START
               </Text>
 
-              <Text style={styles.routeCityName}>
-                {fromCity}
+              <Text
+                style={
+                  styles.routeCityName
+                }
+              >
+                {fromCity || 'Pickup'}
               </Text>
             </View>
           </View>
+
 
           {/* INTERMEDIATE CITIES */}
 
           {routeCities.length > 0 ? (
-            routeCities.map((city, index) => {
-              const selected = isSelected(city.name);
+            routeCities.map(
+              (city, index) => {
+                const selected =
+                  isSelected(
+                    city.name,
+                  );
 
-              return (
-                <View
-                  key={city.id}
-                  style={styles.routeRow}>
-                  <View style={styles.timeline}>
+                return (
+                  <View
+                    key={
+                      city.id ??
+                      `${city.name}-${index}`
+                    }
+                    style={
+                      styles.routeRow
+                    }
+                  >
+                    <View
+                      style={
+                        styles.timeline
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.cityDot,
+                          selected &&
+                          styles.selectedCityDot,
+                        ]}
+                      />
+
+                      {index !==
+                        routeCities.length -
+                        1 && (
+                          <View
+                            style={
+                              styles.timelineLine
+                            }
+                          />
+                        )}
+                    </View>
+
                     <View
                       style={[
-                        styles.cityDot,
+                        styles.intermediateCard,
                         selected &&
-                          styles.selectedCityDot,
-                      ]}
-                    />
-
-                    {index !== routeCities.length - 1 && (
-                      <View
-                        style={styles.timelineLine}
-                      />
-                    )}
-                  </View>
-
-                  <View
-                    style={[
-                      styles.intermediateCard,
-                      selected &&
                         styles.selectedCard,
-                    ]}>
-                    <View style={styles.cityInfo}>
-                      <Text
-                        style={[
-                          styles.intermediateName,
-                          selected &&
-                            styles.selectedCityName,
-                        ]}>
-                        {city.name}
-                      </Text>
-
-                      <Text style={styles.stopText}>
-                        {selected
-                          ? 'Included in route'
-                          : 'Not included'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.actionButtons}>
-                      {/* MINUS */}
-
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        style={[
-                          styles.actionButton,
-                          !selected &&
-                            styles.disabledButton,
-                        ]}
-                        disabled={!selected}
-                        onPress={() =>
-                          removeCity(city.name)
-                        }>
+                      ]}
+                    >
+                      <View
+                        style={
+                          styles.cityInfo
+                        }
+                      >
                         <Text
                           style={[
-                            styles.minusText,
-                            !selected &&
-                              styles.disabledText,
-                          ]}>
-                          −
-                        </Text>
-                      </TouchableOpacity>
-
-                      {/* PLUS */}
-
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        style={[
-                          styles.actionButton,
-                          selected &&
-                            styles.disabledButton,
-                        ]}
-                        disabled={selected}
-                        onPress={() =>
-                          addCity(city.name)
-                        }>
-                        <Text
-                          style={[
-                            styles.plusText,
+                            styles.intermediateName,
                             selected &&
-                              styles.disabledText,
-                          ]}>
-                          +
+                            styles.selectedCityName,
+                          ]}
+                        >
+                          {city.name}
                         </Text>
-                      </TouchableOpacity>
+
+                        <Text
+                          style={
+                            styles.stopText
+                          }
+                        >
+                          {selected
+                            ? 'Included in route'
+                            : 'Not included'}
+                        </Text>
+                      </View>
+
+                      <View
+                        style={
+                          styles.actionButtons
+                        }
+                      >
+
+                        {/* MINUS */}
+
+                        <TouchableOpacity
+                          activeOpacity={
+                            0.7
+                          }
+                          style={[
+                            styles.actionButton,
+                            !selected &&
+                            styles.disabledButton,
+                          ]}
+                          disabled={
+                            !selected
+                          }
+                          onPress={() =>
+                            removeCity(
+                              city.name,
+                            )
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.minusText,
+                              !selected &&
+                              styles.disabledText,
+                            ]}
+                          >
+                            −
+                          </Text>
+                        </TouchableOpacity>
+
+
+                        {/* PLUS */}
+
+                        <TouchableOpacity
+                          activeOpacity={
+                            0.7
+                          }
+                          style={[
+                            styles.actionButton,
+                            selected &&
+                            styles.disabledButton,
+                          ]}
+                          disabled={
+                            selected
+                          }
+                          onPress={() =>
+                            addCity(
+                              city.name,
+                            )
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.plusText,
+                              selected &&
+                              styles.disabledText,
+                            ]}
+                          >
+                            +
+                          </Text>
+                        </TouchableOpacity>
+
+                      </View>
                     </View>
                   </View>
-                </View>
-              );
-            })
+                );
+              },
+            )
           ) : (
-            <View style={styles.noRouteBox}>
-              <Text style={styles.noRouteTitle}>
-                No route data found
+            <View
+              style={
+                styles.noRouteBox
+              }
+            >
+              <Text
+                style={
+                  styles.noRouteTitle
+                }
+              >
+                No intermediate cities
               </Text>
 
-              <Text style={styles.noRouteText}>
-                Route information is not available for
-                this city combination.
+              <Text
+                style={
+                  styles.noRouteText
+                }
+              >
+                The route API returned the
+                route successfully, but no
+                intermediate cities were
+                returned.
               </Text>
             </View>
           )}
 
-          {/* END CITY */}
 
-          <View style={styles.routeRow}>
-            <View style={styles.timeline}>
-              <View style={styles.timelineLineTop} />
-              <View style={styles.endDot} />
+          {/* END */}
+
+          <View
+            style={styles.routeRow}
+          >
+            <View
+              style={styles.timeline}
+            >
+              {routeCities.length >
+                0 && (
+                  <View
+                    style={
+                      styles.timelineLineTop
+                    }
+                  />
+                )}
+
+              <View
+                style={styles.endDot}
+              />
             </View>
 
-            <View style={styles.routeCityCard}>
-              <Text style={styles.endLabel}>END</Text>
+            <View
+              style={
+                styles.routeCityCard
+              }
+            >
+              <Text
+                style={styles.endLabel}
+              >
+                END
+              </Text>
 
-              <Text style={styles.routeCityName}>
-                {toCity}
+              <Text
+                style={
+                  styles.routeCityName
+                }
+              >
+                {toCity ||
+                  'Destination'}
               </Text>
             </View>
           </View>
+
         </View>
+
 
         {/* SELECTED SUMMARY */}
 
-        <View style={styles.summaryCard}>
-          <View>
-            <Text style={styles.summaryTitle}>
+        <View
+          style={styles.summaryCard}
+        >
+          <View
+            style={{ flex: 1 }}
+          >
+            <Text
+              style={
+                styles.summaryTitle
+              }
+            >
               Selected Cities
             </Text>
 
-            <Text style={styles.summaryRoute}>
-              {fromCity}
-              {selectedCities.length > 0 &&
-                ` → ${selectedCities.join(' → ')}`}
+            <Text
+              style={
+                styles.summaryRoute
+              }
+            >
+              {fromCity || 'Pickup'}
+
+              {selectedCities.length >
+                0 &&
+                ` → ${selectedCities.join(
+                  ' → ',
+                )}`}
+
               {' → '}
-              {toCity}
+
+              {toCity ||
+                'Destination'}
             </Text>
           </View>
 
-          <View style={styles.summaryCount}>
-            <Text style={styles.summaryCountNumber}>
+          <View
+            style={styles.summaryCount}
+          >
+            <Text
+              style={
+                styles.summaryCountNumber
+              }
+            >
               {selectedCities.length}
             </Text>
 
-            <Text style={styles.summaryCountLabel}>
+            <Text
+              style={
+                styles.summaryCountLabel
+              }
+            >
               Stops
             </Text>
           </View>
         </View>
 
-        {/* SPACE FOR BOTTOM BUTTON */}
 
-        <View style={{height: 100}} />
+        {/* DEBUG */}
+
+        {routeData && (
+          <View
+            style={styles.debugCard}
+          >
+            <Text
+              style={styles.debugTitle}
+            >
+              Route Details
+            </Text>
+
+            <Text
+              style={styles.debugText}
+            >
+              Distance:{' '}
+              {
+                routeData.distance_meters
+              }{' '}
+              meters
+            </Text>
+
+            <Text
+              style={styles.debugText}
+            >
+              Duration:{' '}
+              {routeData.duration}
+            </Text>
+
+            <Text
+              style={styles.debugText}
+            >
+              Route polyline:{' '}
+              {routeData.polyline
+                ? 'Available'
+                : 'Not available'}
+            </Text>
+
+            <Text
+              style={styles.debugText}
+            >
+              Decoded coordinates:{' '}
+              {routeCoordinates.length}
+            </Text>
+
+            <Text
+              style={styles.debugText}
+            >
+              Route cities:{' '}
+              {routeCities.length}
+            </Text>
+
+            <Text
+              style={styles.debugText}
+            >
+              Route legs:{' '}
+              {routeData.legs
+                ?.length || 0}
+            </Text>
+          </View>
+        )}
+
+
+        <View
+          style={{ height: 100 }}
+        />
+
       </ScrollView>
+
 
       {/* BOTTOM BUTTON */}
 
-      <View style={styles.bottomContainer}>
+      <View
+        style={
+          styles.bottomContainer
+        }
+      >
         <TouchableOpacity
           activeOpacity={0.85}
-          style={styles.continueButton}
-          onPress={handleContinue}>
-          <Text style={styles.continueText}>
-            Continue
+          style={[
+            styles.continueButton,
+            (loadingRoute ||
+              !routeData) &&
+            styles.continueButtonDisabled,
+          ]}
+          disabled={
+            loadingRoute ||
+            !routeData
+          }
+          onPress={handleContinue}
+        >
+          <Text
+            style={styles.continueText}
+          >
+            {loadingRoute
+              ? 'Calculating...'
+              : 'Continue'}
           </Text>
 
-          <Text style={styles.continueArrow}>→</Text>
+          {!loadingRoute && (
+            <Text
+              style={
+                styles.continueArrow
+              }
+            >
+              →
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
+
     </SafeAreaView>
   );
 };
 
+
 export default RouteSelectionScreen;
 
-// --------------------------------------------------
+
+// ==================================================
 // STYLES
-// --------------------------------------------------
+// ==================================================
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     backgroundColor: '#F7F8FA',
   },
+
+
+  // ------------------------------------------------
+  // HEADER
+  // ------------------------------------------------
 
   header: {
     height: 60,
@@ -605,6 +1750,11 @@ const styles = StyleSheet.create({
     width: 40,
   },
 
+
+  // ------------------------------------------------
+  // CONTENT
+  // ------------------------------------------------
+
   content: {
     paddingHorizontal: 16,
     paddingTop: 20,
@@ -624,6 +1774,11 @@ const styles = StyleSheet.create({
     marginTop: -5,
   },
 
+
+  // ------------------------------------------------
+  // INPUT
+  // ------------------------------------------------
+
   inputWrapper: {
     position: 'relative',
     zIndex: 20,
@@ -637,7 +1792,7 @@ const styles = StyleSheet.create({
   },
 
   cityInput: {
-    height: 58,
+    minHeight: 58,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E5E9',
@@ -651,6 +1806,7 @@ const styles = StyleSheet.create({
   cityLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
 
   locationCircle: {
@@ -670,9 +1826,10 @@ const styles = StyleSheet.create({
   },
 
   cityText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#202124',
+    flex: 1,
   },
 
   arrow: {
@@ -680,6 +1837,11 @@ const styles = StyleSheet.create({
     color: '#555555',
     marginTop: -6,
   },
+
+
+  // ------------------------------------------------
+  // DROPDOWN
+  // ------------------------------------------------
 
   dropdown: {
     position: 'absolute',
@@ -735,6 +1897,11 @@ const styles = StyleSheet.create({
     color: '#2878E8',
   },
 
+
+  // ------------------------------------------------
+  // SMALL ROUTE LINE
+  // ------------------------------------------------
+
   smallRouteLine: {
     height: 20,
     marginLeft: 30,
@@ -745,6 +1912,112 @@ const styles = StyleSheet.create({
     width: 2,
     backgroundColor: '#D5D9DF',
   },
+
+
+  // ------------------------------------------------
+  // LOADING
+  // ------------------------------------------------
+
+  loadingBox: {
+    marginTop: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#E6E9ED',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  loadingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#555555',
+    fontWeight: '600',
+  },
+
+
+  // ------------------------------------------------
+  // ROUTE INFO
+  // ------------------------------------------------
+
+  routeInfoCard: {
+    marginTop: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E8EAED',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  routeInfoItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+
+  routeInfoLabel: {
+    fontSize: 11,
+    color: '#777777',
+    marginBottom: 5,
+  },
+
+  routeInfoValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2878E8',
+  },
+
+  routeInfoDivider: {
+    width: 1,
+    height: 35,
+    backgroundColor: '#E5E7EA',
+  },
+
+
+  // ------------------------------------------------
+  // MAP
+  // ------------------------------------------------
+
+  mapCard: {
+    marginTop: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E8EAED',
+  },
+
+  mapHeader: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  mapTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#202124',
+  },
+
+  mapSubtitle: {
+    fontSize: 12,
+    color: '#777777',
+  },
+
+  map: {
+    width: '100%',
+    height: 300,
+  },
+
+
+  // ------------------------------------------------
+  // CITY SECTION
+  // ------------------------------------------------
 
   citySectionHeader: {
     marginTop: 28,
@@ -769,6 +2042,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+
+
+  // ------------------------------------------------
+  // ROUTE TIMELINE
+  // ------------------------------------------------
 
   routeContainer: {
     backgroundColor: '#FFFFFF',
@@ -858,7 +2136,7 @@ const styles = StyleSheet.create({
   },
 
   routeCityName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: '#202124',
   },
@@ -906,7 +2184,6 @@ const styles = StyleSheet.create({
 
   actionButtons: {
     flexDirection: 'row',
-    gap: 7,
     marginLeft: 10,
   },
 
@@ -919,6 +2196,7 @@ const styles = StyleSheet.create({
     borderColor: '#D8DDE4',
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 7,
   },
 
   minusText: {
@@ -963,6 +2241,11 @@ const styles = StyleSheet.create({
     color: '#907B39',
     lineHeight: 18,
   },
+
+
+  // ------------------------------------------------
+  // SUMMARY
+  // ------------------------------------------------
 
   summaryCard: {
     marginTop: 18,
@@ -1011,6 +2294,38 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+
+  // ------------------------------------------------
+  // DEBUG
+  // ------------------------------------------------
+
+  debugCard: {
+    marginTop: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E8EAED',
+  },
+
+  debugTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#333333',
+    marginBottom: 8,
+  },
+
+  debugText: {
+    fontSize: 11,
+    color: '#777777',
+    marginBottom: 4,
+  },
+
+
+  // ------------------------------------------------
+  // BOTTOM BUTTON
+  // ------------------------------------------------
+
   bottomContainer: {
     position: 'absolute',
     bottom: 0,
@@ -1031,6 +2346,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  continueButtonDisabled: {
+    backgroundColor: '#AFC8ED',
   },
 
   continueText: {

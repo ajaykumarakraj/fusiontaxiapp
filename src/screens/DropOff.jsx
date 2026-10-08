@@ -133,7 +133,7 @@ const DropCityScreen = ({ navigation, route }) => {
         //   rideData: CityData,
         // });
 
-        navigation.navigate("SelectDate", {
+        navigation.navigate("RouteSelection", {
          rideData: CityData,
      });
       }

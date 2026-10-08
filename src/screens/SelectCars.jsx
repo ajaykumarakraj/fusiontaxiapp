@@ -8,44 +8,54 @@ import {
   SafeAreaView,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import axios from "axios";
+import * as Keychain from "react-native-keychain";
+import { Alert } from "react-native";
+import { useEffect } from "react"; 
 
-const cars = [
-  {
-    id: "1",
-    name: "Sedan",
-    description: "Comfortable for 4 passengers",
-    icon: "car-sport-outline",
-    seats: 4,
-  },
-  {
-    id: "2",
-    name: "SUV",
-    description: "Spacious for 5-7 passengers",
-    icon: "car-outline",
-    seats: 7,
-  },
-  {
-    id: "3",
-    name: "Hatchback",
-    description: "Compact and economical",
-    icon: "car-outline",
-    seats: 4,
-  },
-  {
-    id: "4",
-    name: "MUV",
-    description: "More space for passengers",
-    icon: "car-sport-outline",
-    seats: 7,
-  },
-];
 
 const SelectCarScreen = ({ navigation, route }) => {
   const rideData = route?.params?.rideData || {};
-
+const [cars, setCars] = useState([]);
   const [selectedCar, setSelectedCar] = useState(
     rideData?.car || null
   );
+console.log("Ride Data:", rideData);
+console.log("Selected Car:", cars);
+useEffect(()=>{
+getcars()
+},[])
+
+const getcars = async () => {
+  try {
+
+
+    const credentials = await Keychain.getGenericPassword();
+
+    if (!credentials) {
+      Alert.alert('Session Expired', 'Please login again.');
+      return;
+    }
+
+    const token = credentials.password;
+
+    const response = await axios.get('https://api.squarebigha.com/oldApi/api/v1/vehicles',{
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    console.log('Cars fetched successfully:', response.data);
+    setCars(response.data.data || []); // Assuming the API returns an array of cars in response.data.vehicles
+  }
+  catch (error) {
+    console.error('Error fetching cars:', error);
+  }
+}
+
+
+
+
+
 
   const handleContinue = () => {
     if (!selectedCar) return;
@@ -66,58 +76,75 @@ const SelectCarScreen = ({ navigation, route }) => {
     const isSelected = selectedCar?.id === item.id;
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.8}
+    <TouchableOpacity
+      activeOpacity={0.8}
+      style={[
+        styles.carCard,
+        isSelected && styles.selectedCarCard,
+      ]}
+      onPress={() => setSelectedCar(item)}
+    >
+      {/* Car Icon */}
+      <View
         style={[
-          styles.carCard,
-          isSelected && styles.selectedCarCard,
+          styles.iconContainer,
+          isSelected && styles.selectedIconContainer,
         ]}
-        onPress={() => setSelectedCar(item)}
       >
-        <View
-          style={[
-            styles.iconContainer,
-            isSelected && styles.selectedIconContainer,
-          ]}
-        >
+        <Ionicons
+          name="car-sport-outline"
+          size={32}
+          color={isSelected ? "#fff" : "#2563EB"}
+        />
+      </View>
+
+      {/* Car Information */}
+      <View style={styles.carInfo}>
+
+        {/* Make + Model */}
+        <Text style={styles.carName}>
+          {item.make} {item.model}
+        </Text>
+
+        {/* Variant */}
+        <Text style={styles.description}>
+          {item.variant?.toUpperCase()} • {item.year} • {item.color}
+        </Text>
+
+        {/* Registration */}
+        <Text style={styles.registration}>
+          {item.registration_number}
+        </Text>
+
+        {/* Seats */}
+        <View style={styles.seatRow}>
           <Ionicons
-            name={item.icon}
-            size={32}
-            color={isSelected ? "#fff" : "#2563EB"}
+            name="people-outline"
+            size={16}
+            color="#666"
           />
-        </View>
 
-        <View style={styles.carInfo}>
-          <Text style={styles.carName}>{item.name}</Text>
-
-          <Text style={styles.description}>
-            {item.description}
+          <Text style={styles.seatText}>
+            {item.available_passenger_seats} passenger seats available
           </Text>
-
-          <View style={styles.seatRow}>
-            <Ionicons
-              name="people-outline"
-              size={16}
-              color="#666"
-            />
-
-            <Text style={styles.seatText}>
-              {item.seats} seats
-            </Text>
-          </View>
         </View>
 
-        <View
-          style={[
-            styles.radio,
-            isSelected && styles.radioSelected,
-          ]}
-        >
-          {isSelected && <View style={styles.radioDot} />}
-        </View>
-      </TouchableOpacity>
-    );
-  };
+      </View>
+
+      {/* Radio */}
+      <View
+        style={[
+          styles.radio,
+          isSelected && styles.radioSelected,
+        ]}
+      >
+        {isSelected && (
+          <View style={styles.radioDot} />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
 
   return (
     <SafeAreaView style={styles.container}>

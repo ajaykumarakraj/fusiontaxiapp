@@ -12,6 +12,9 @@
       android:usesCleartextTraffic="${usesCleartextTraffic}"
       android:supportsRtl="true">
       <meta-data
+    android:name="com.google.android.geo.API_KEY"
+    android:value="AIzaSyB1R5kZJSgrPXJVOfXFnx51SwSuOwCE6hA" />
+      <meta-data
         android:name="com.facebook.sdk.ApplicationId"
         android:value="@string/facebook_app_id" />
       <meta-data
