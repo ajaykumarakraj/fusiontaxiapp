@@ -6,81 +6,214 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
 import * as Keychain from 'react-native-keychain';
+
+const API_URL = 'https://api.squarebigha.com/oldApi/api/v1/rides';
+
 const ReviewRide = ({ navigation, route }) => {
-
-
-
-
-  
   const rideData = route?.params?.rideData || {};
+console.log('ReviewRideScreen - rideData:', rideData);
+  const [loading, setLoading] = React.useState(false);
 
-  const pickup = rideData?.pickupLocation;
-  const drop = rideData?.dropLocation;
+  const car = rideData.car || {};
+  const pickup = rideData.from || 'Pickup location';
+  const drop = rideData.to || 'Drop location';
 
-  const handleEdit = (screen) => {
-    navigation.navigate(screen, {
-      rideData,
+  const stops = Array.isArray(rideData.stops)
+    ? rideData.stops
+    : [];
+
+  const passengers = Number(rideData.passengers || 0);
+  const pricePerSeat = Number(rideData.pricePerSeat || 0);
+
+  // Route city / stop object se coordinates nikalna
+  const getAddress = item => {
+    if (typeof item === 'string') return item;
+
+    return (
+      item?.formatted_address ||
+      item?.address ||
+      item?.name ||
+      item?.city ||
+      item?.place_name ||
+      ''
+    );
+  };
+
+  const findLocation = address => {
+    const cities = [
+      ...(Array.isArray(rideData.route_cities)
+        ? rideData.route_cities
+        : []),
+      ...(Array.isArray(rideData.stopDetails)
+        ? rideData.stopDetails
+        : []),
+    ];
+
+    return cities.find(item => {
+      const itemAddress = getAddress(item);
+
+      return (
+        itemAddress.toLowerCase() ===
+        String(address).toLowerCase()
+      );
     });
   };
 
-  const handlePostRide = async () => {
-    console.log('Review DATA:',rideData.date);
- 
-    // Yahan API call karna hai
-try{
-   const credentials = await Keychain.getGenericPassword();
+  const getCoordinates = address => {
+    const location = findLocation(address);
 
-    if (!credentials) {
-      Alert.alert('Session Expired', 'Please login again.');
+    return {
+      latitude:
+        location?.latitude ??
+        location?.lat ??
+        location?.geometry?.location?.lat ??
+        null,
+
+      longitude:
+        location?.longitude ??
+        location?.lng ??
+        location?.geometry?.location?.lng ??
+        null,
+    };
+  };
+
+  const handleEdit = screen => {
+    navigation.navigate(screen, { rideData });
+  };
+
+  const handlePostRide = async () => {
+    if (loading) return;
+
+    if (!car.id || !car.user_id) {
+      Alert.alert('Error', 'Please select a valid car.');
       return;
     }
-console.log('Credentials:', credentials);
-    const token = credentials.password;
-  const payload={
-    vehicle_id:rideData.car.id,
-    driver_id:rideData.car.user_id,
-    from_address:rideData.pickupLocation.formatted_address,
-    from_latitude:rideData.pickupLocation.latitude,
-    from_longitude:rideData.pickupLocation.longitude,
-    to_address:rideData.dropLocation.formatted_address,
-    to_latitude:rideData.dropLocation.latitude,
-    to_longitude:rideData.dropLocation.longitude,
-    departure_date:rideData.date,
-    departure_time:rideData.time,
-    total_seats:rideData.passengers,
-    available_seats:rideData.passengers,
-    price_per_seat:rideData.pricePerSeat,
-    notes:"Comfortable ride. One small luggage allowed.",
-    booking_type:"instant",
-    smoking_allowed:false,
-    pets_allowed:false,
-    music_allowed:true,
-    stops:[{"address":"Sector 62, Noida","latitude":28.6271,"longitude":77.3714},{"address":"Sector 18, Noida","latitude":28.5706,"longitude":77.3219}]
-  }
-  console.log('post Payload:', payload);
-const response = await axios.post(' https://api.squarebigha.com/oldApi/api/v1/rides',payload, {
-  headers:{
-    Authorization:`Bearer ${token}`,
-  }
-})
-console.log('Ride posted successfully:', response.data);
-}
-catch(error){
-  console.error('Error posting ride:', error);
-}
 
+    if (!rideData.from || !rideData.to) {
+      Alert.alert('Error', 'Pickup and drop locations are required.');
+      return;
+    }
 
-    // Example:
-    // navigation.navigate('RideSuccess');
+    if (!rideData.date || !rideData.time) {
+      Alert.alert('Error', 'Please select the departure date and time.');
+      return;
+    }
+
+    if (passengers < 1 || pricePerSeat < 1) {
+      Alert.alert('Error', 'Please check passengers and seat price.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const credentials = await Keychain.getGenericPassword();
+
+      if (!credentials) {
+        Alert.alert('Session Expired', 'Please login again.');
+        return;
+      }
+
+      const pickupCoordinates = getCoordinates(pickup);
+      const dropCoordinates = getCoordinates(drop);
+
+      const formattedStops = stops.map(stop => {
+        const address = getAddress(stop);
+        const coordinates = getCoordinates(address);
+
+        // stopDetails mein coordinates hon to unhe priority dein
+        const stopDetail =
+          typeof stop === 'object' ? stop : findLocation(address);
+
+        return {
+          address,
+          latitude:
+            stopDetail?.latitude ??
+            stopDetail?.lat ??
+            coordinates.latitude,
+
+          longitude:
+            stopDetail?.longitude ??
+            stopDetail?.lng ??
+            coordinates.longitude,
+        };
+      });
+
+      const payload = {
+        vehicle_id: car.id,
+        driver_id: car.user_id,
+
+        from_address: pickup,
+        from_latitude: rideData.from_latitude,
+        from_longitude: rideData.from_longitude,
+
+        to_address: drop,
+        to_latitude: rideData.to_latitude ,
+        to_longitude: rideData.to_longitude ,
+
+        departure_date: rideData.date,
+        departure_time: rideData.time,
+
+        total_seats: passengers,
+        available_seats: passengers,
+        price_per_seat: pricePerSeat,
+
+        notes: 'Comfortable ride. One small luggage allowed.',
+        booking_type: 'instant',
+
+        smoking_allowed: false,
+        pets_allowed: false,
+        music_allowed: true,
+
+        stops: formattedStops,
+      };
+
+      console.log('Post Ride Payload:', payload);
+
+      const response = await axios.post(API_URL, payload, {
+        headers: {
+          Authorization: `Bearer ${credentials.password}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      });
+
+      console.log('Ride posted successfully:', response.data);
+
+      Alert.alert(
+        'Success',
+        'Your ride has been posted successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('RideSuccess'),
+          },
+        ],
+      );
+    } catch (error) {
+      console.error(
+        'Error posting ride:',
+        error.response?.data || error.message,
+      );
+
+      Alert.alert(
+        'Error',
+        error.response?.data?.message ||
+          'Unable to post ride. Please try again.',
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -90,9 +223,7 @@ catch(error){
           <Icon name="arrow-back" size={24} color="#222" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>
-          Review Ride
-        </Text>
+        <Text style={styles.headerTitle}>Review Ride</Text>
 
         <View style={{ width: 42 }} />
       </View>
@@ -101,275 +232,269 @@ catch(error){
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-
-        {/* Title */}
-        <Text style={styles.title}>
-          Review your ride
-        </Text>
+        <Text style={styles.title}>Review your ride</Text>
 
         <Text style={styles.subtitle}>
           Check all details before posting your ride
         </Text>
 
-        {/* Route Card */}
+        {/* Route */}
         <View style={styles.card}>
-
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>
-              Route
-            </Text>
+            <Text style={styles.cardTitle}>Route</Text>
 
-            <TouchableOpacity
-              onPress={() =>
-                handleEdit('PickupCity')
-              }
-            >
-              <Text style={styles.editText}>
-                Edit
-              </Text>
+            <TouchableOpacity onPress={() => handleEdit('RouteSelection')}>
+              <Text style={styles.editText}>Edit</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Pickup */}
           <View style={styles.locationRow}>
-
             <View style={styles.iconColumn}>
               <View style={styles.pickupDot} />
-
               <View style={styles.verticalLine} />
             </View>
 
             <View style={styles.locationContent}>
-              <Text style={styles.locationLabel}>
-                PICKUP
-              </Text>
-
-              <Text style={styles.locationText}>
-                {pickup?.formatted_address ||
-                  'Pickup location'}
-              </Text>
+              <Text style={styles.locationLabel}>PICKUP</Text>
+              <Text style={styles.locationText}>{pickup}</Text>
             </View>
-
           </View>
 
-          {/* Drop */}
-          <View style={styles.locationRow}>
+          {/* Intermediate stops */}
+          {stops.map((stop, index) => (
+            <View key={`${getAddress(stop)}-${index}`} style={styles.stopRow}>
+              <View style={styles.iconColumn}>
+                <View style={styles.stopDot} />
+                <View style={styles.verticalLine} />
+              </View>
 
+              <View style={styles.locationContent}>
+                <Text style={styles.locationLabel}>
+                  STOP {index + 1}
+                </Text>
+
+                <Text style={styles.locationText}>
+                  {getAddress(stop)}
+                </Text>
+              </View>
+            </View>
+          ))}
+
+          <View style={styles.locationRow}>
             <View style={styles.iconColumn}>
               <View style={styles.dropDot} />
             </View>
 
             <View style={styles.locationContent}>
-              <Text style={styles.locationLabel}>
-                DROP
-              </Text>
-
-              <Text style={styles.locationText}>
-                {drop?.formatted_address ||
-                  'Drop location'}
-              </Text>
+              <Text style={styles.locationLabel}>DROP</Text>
+              <Text style={styles.locationText}>{drop}</Text>
             </View>
-
           </View>
-
         </View>
 
-        {/* Date & Time */}
+        {/* Schedule */}
         <View style={styles.card}>
-
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>
-              Schedule
-            </Text>
+            <Text style={styles.cardTitle}>Schedule</Text>
 
-            <TouchableOpacity
-              onPress={() =>
-                handleEdit('SelectDate')
-              }
-            >
-              <Text style={styles.editText}>
-                Edit
-              </Text>
+            <TouchableOpacity onPress={() => handleEdit('SelectDate')}>
+              <Text style={styles.editText}>Edit</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.infoRow}>
-
             <View style={styles.infoIcon}>
-              <Icon
-                name="calendar-outline"
-                size={23}
-                color="#1976D2"
-              />
+              <Icon name="calendar-outline" size={23} color="#1976D2" />
             </View>
 
             <View>
-              <Text style={styles.infoLabel}>
-                DATE
-              </Text>
-
+              <Text style={styles.infoLabel}>DATE</Text>
               <Text style={styles.infoValue}>
-                {rideData?.date ||
-                  'Date not selected'}
+                {rideData.date || 'Date not selected'}
               </Text>
             </View>
-
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.infoRow}>
-
             <View style={styles.infoIcon}>
-              <Icon
-                name="time-outline"
-                size={23}
-                color="#1976D2"
-              />
+              <Icon name="time-outline" size={23} color="#1976D2" />
             </View>
 
             <View>
-              <Text style={styles.infoLabel}>
-                DEPARTURE TIME
-              </Text>
-
+              <Text style={styles.infoLabel}>DEPARTURE TIME</Text>
               <Text style={styles.infoValue}>
-                {rideData?.time ||
-                  'Time not selected'}
+                {rideData.time || 'Time not selected'}
               </Text>
             </View>
-
           </View>
-
         </View>
 
-        {/* Passenger & Price */}
+        {/* Distance and duration */}
         <View style={styles.card}>
+          <Text style={styles.cardTitle}>Trip Information</Text>
 
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>
-              Ride Details
-            </Text>
+          <View style={styles.tripInfoRow}>
+            <Icon name="navigate-outline" size={23} color="#1976D2" />
 
-            <TouchableOpacity
-              onPress={() =>
-                handleEdit('Passenger')
-              }
-            >
-              <Text style={styles.editText}>
-                Edit
+            <View style={styles.tripInfoText}>
+              <Text style={styles.infoLabel}>TOTAL DISTANCE</Text>
+              <Text style={styles.infoValue}>
+                {rideData.distance_km != null
+                  ? `${Number(rideData.distance_km).toFixed(2)} km`
+                  : 'Not available'}
               </Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.tripInfoRow}>
+            <Icon name="hourglass-outline" size={23} color="#1976D2" />
+
+            <View style={styles.tripInfoText}>
+              <Text style={styles.infoLabel}>ESTIMATED DURATION</Text>
+              <Text style={styles.infoValue}>
+                {rideData.duration_seconds != null
+                  ? `${Math.floor(rideData.duration_seconds / 3600)} hr ${
+                      Math.floor(
+                        (rideData.duration_seconds % 3600) / 60,
+                      )
+                    } min`
+                  : rideData.duration || 'Not available'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Car information */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Vehicle Details</Text>
+
+            <Icon name="car-sport-outline" size={25} color="#1976D2" />
+          </View>
+
+          <Text style={styles.carName}>
+            {`${car.make || ''} ${car.model || ''} ${
+              car.variant || ''
+            }`.trim() || 'Car not selected'}
+          </Text>
+
+          <View style={styles.carInfoRow}>
+            <Text style={styles.carInfoLabel}>Registration</Text>
+            <Text style={styles.carInfoValue}>
+              {car.registration_number || 'N/A'}
+            </Text>
+          </View>
+
+          <View style={styles.carInfoRow}>
+            <Text style={styles.carInfoLabel}>Color</Text>
+            <Text style={styles.carInfoValue}>
+              {car.color || 'N/A'}
+            </Text>
+          </View>
+
+          <View style={styles.carInfoRow}>
+            <Text style={styles.carInfoLabel}>Year</Text>
+            <Text style={styles.carInfoValue}>
+              {car.year || 'N/A'}
+            </Text>
+          </View>
+
+          <View style={styles.carInfoRow}>
+            <Text style={styles.carInfoLabel}>Fuel</Text>
+            <Text style={styles.carInfoValue}>
+              {car.fuel_type || 'N/A'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Passengers and price */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Ride Details</Text>
+
+            <TouchableOpacity onPress={() => handleEdit('Passenger')}>
+              <Text style={styles.editText}>Edit</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.detailsGrid}>
-
-            {/* Passengers */}
             <View style={styles.detailBox}>
-
               <View style={styles.detailIcon}>
-                <Icon
-                  name="people-outline"
-                  size={25}
-                  color="#1976D2"
-                />
+                <Icon name="people-outline" size={25} color="#1976D2" />
               </View>
 
-              <Text style={styles.detailLabel}>
-                PASSENGERS
-              </Text>
-
-              <Text style={styles.detailValue}>
-                {rideData?.passengers || 0}
-              </Text>
+              <Text style={styles.detailLabel}>PASSENGERS</Text>
+              <Text style={styles.detailValue}>{passengers}</Text>
 
               <Text style={styles.detailSmall}>
-                {rideData?.passengers === 1
-                  ? 'Seat'
-                  : 'Seats'}
+                {passengers === 1 ? 'Seat' : 'Seats'}
               </Text>
-
             </View>
 
-            {/* Price */}
             <View style={styles.detailBox}>
-
               <View style={styles.detailIcon}>
-                <Icon
-                  name="cash-outline"
-                  size={25}
-                  color="#1976D2"
-                />
+                <Icon name="cash-outline" size={25} color="#1976D2" />
               </View>
 
-              <Text style={styles.detailLabel}>
-                PRICE / SEAT
-              </Text>
+              <Text style={styles.detailLabel}>PRICE / SEAT</Text>
+              <Text style={styles.detailValue}>₹{pricePerSeat}</Text>
 
-              <Text style={styles.detailValue}>
-                ₹{rideData?.pricePerSeat || 0}
-              </Text>
-
-              <Text style={styles.detailSmall}>
-                Per passenger
-              </Text>
-
+              <Text style={styles.detailSmall}>Per passenger</Text>
             </View>
-
           </View>
-
         </View>
 
         {/* Earnings */}
-        {rideData?.passengers &&
-          rideData?.pricePerSeat && (
-            <View style={styles.earningCard}>
-
-              <View>
-                <Text style={styles.earningLabel}>
-                  Potential earnings
-                </Text>
-
-                <Text style={styles.earningSubtext}>
-                  {rideData.passengers} passengers × ₹
-                  {rideData.pricePerSeat}
-                </Text>
-              </View>
-
-              <Text style={styles.earningAmount}>
-                ₹
-                {rideData.passengers *
-                  rideData.pricePerSeat}
+        {passengers > 0 && pricePerSeat > 0 && (
+          <View style={styles.earningCard}>
+            <View>
+              <Text style={styles.earningLabel}>
+                Potential earnings
               </Text>
 
+              <Text style={styles.earningSubtext}>
+                {passengers} seats × ₹{pricePerSeat}
+              </Text>
             </View>
-          )}
 
-        {/* Bottom Space */}
+            <Text style={styles.earningAmount}>
+              ₹{passengers * pricePerSeat}
+            </Text>
+          </View>
+        )}
+
         <View style={{ height: 100 }} />
-
       </ScrollView>
 
-      {/* Post Ride */}
+      {/* Post ride button */}
       <View style={styles.bottomContainer}>
-
         <TouchableOpacity
-          style={styles.postButton}
+          style={[
+            styles.postButton,
+            loading && { opacity: 0.7 },
+          ]}
           onPress={handlePostRide}
+          disabled={loading}
         >
-          <Icon
-            name="checkmark-circle-outline"
-            size={22}
-            color="#fff"
-          />
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Icon
+                name="checkmark-circle-outline"
+                size={22}
+                color="#fff"
+              />
 
-          <Text style={styles.postButtonText}>
-            Post Ride
-          </Text>
+              <Text style={styles.postButtonText}>Post Ride</Text>
+            </>
+          )}
         </TouchableOpacity>
-
       </View>
-
     </SafeAreaView>
   );
 };
@@ -632,4 +757,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  stopRow: {
+  flexDirection: 'row',
+  minHeight: 55,
+},
+
+stopDot: {
+  width: 10,
+  height: 10,
+  borderRadius: 5,
+  backgroundColor: '#F59E0B',
+  marginTop: 5,
+},
+
+tripInfoRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginTop: 16,
+},
+
+tripInfoText: {
+  marginLeft: 14,
+},
+
+carName: {
+  fontSize: 20,
+  fontWeight: '700',
+  color: '#222',
+  marginBottom: 12,
+  textTransform: 'capitalize',
+},
+
+carInfoRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  paddingVertical: 10,
+  borderTopWidth: 1,
+  borderTopColor: '#eee',
+},
+
+carInfoLabel: {
+  fontSize: 14,
+  color: '#777',
+},
+
+carInfoValue: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#222',
+  textTransform: 'capitalize',
+},
 });

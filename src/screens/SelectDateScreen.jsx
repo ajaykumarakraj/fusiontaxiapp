@@ -10,7 +10,7 @@ import Icon from "react-native-vector-icons/Ionicons";
 
 const SelectDateScreen = ({ route, navigation }) => {
   const rideData = route?.params?.rideData || {};
-
+console.log("SelectDateScreen - rideData:", rideData);
   const today = new Date();
 
   const [currentMonth, setCurrentMonth] = useState(

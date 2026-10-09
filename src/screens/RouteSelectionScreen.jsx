@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   View,
   Text,
+  TextInput,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -47,7 +48,6 @@ const getAddress = location => {
   );
 };
 
-
 // --------------------------------------------------
 // SCREEN
 // --------------------------------------------------
@@ -61,7 +61,7 @@ const RouteSelectionScreen = ({
   // --------------------------------------------------
 
   const rideData = route?.params?.rideData || {};
-console.log('Ride Data:', rideData);
+console.log('Ride Data:', rideData.dropLocation.latitude);
   const pickupLocation =
     rideData?.pickupLocation || null;
 
@@ -102,8 +102,8 @@ console.log('Ride Data:', rideData);
 
   const [showToDropdown, setShowToDropdown] =
     useState(false);
-
-
+const [citySearch, setCitySearch] = useState('');
+console.log('City Search:', citySearch);
   // --------------------------------------------------
   // INITIAL SOURCE / DESTINATION
   // --------------------------------------------------
@@ -244,18 +244,13 @@ console.log('Ride Data:', rideData);
       };
 
 
-      console.log(
-        '================================',
-      );
-
+    
       console.log(
         'ROUTE PAYLOAD:',
         payload,
       );
 
-      console.log(
-        '================================',
-      );
+    
 
 
       setLoadingRoute(true);
@@ -334,30 +329,20 @@ console.log('Ride Data:', rideData);
       const cities =
         data?.cities || [];
 
+setRouteCities(cities);
 
-      setRouteCities(cities);
+// Initially show/select only 3 cities.
+setSelectedCities(
+  cities.slice(0, 3).map(city => city.name),
+);
 
-
-      // Initially select all cities.
-      setSelectedCities(
-        cities.map(city => city.name),
-      );
-
+setCitySearch('');
 
       console.log(
         'ROUTE CITIES:',
         data.cities,
       );
 
-      console.log(
-        'DISTANCE:',
-        data.distance_km,
-      );
-
-      console.log(
-        'DURATION:',
-        data.duration_seconds,
-      );
 
     } catch (error) {
       console.error(
@@ -379,10 +364,7 @@ console.log('Ride Data:', rideData);
         error.message,
       );
 
-      console.error(
-        '================================',
-      );
-
+  
 
       Alert.alert(
         'Route Error',
@@ -505,31 +487,50 @@ console.log('Ride Data:', rideData);
   };
 
 
-  // --------------------------------------------------
-  // ADD CITY
-  // --------------------------------------------------
-
-  const addCity = cityName => {
-    if (!selectedCities.includes(cityName)) {
-      setSelectedCities(prev => [
-        ...prev,
-        cityName,
-      ]);
-    }
-  };
 
 
-  // --------------------------------------------------
-  // REMOVE CITY
-  // --------------------------------------------------
+const filteredCities = useMemo(() => {
+  const query = citySearch.trim().toLowerCase();
 
-  const removeCity = cityName => {
-    setSelectedCities(prev =>
-      prev.filter(
-        city => city !== cityName,
-      ),
+  if (!query) {
+    return [];
+  }
+
+  return routeCities.filter(city => {
+    const name = city.name?.toLowerCase() || '';
+
+    return (
+      name.includes(query) &&
+      name !== fromCity.toLowerCase() &&
+      name !== toCity.toLowerCase()
     );
-  };
+  });
+}, [routeCities, citySearch, fromCity, toCity]);
+
+const addCity = city => {
+  setSelectedCities(prev =>
+    prev.includes(city.name)
+      ? prev
+      : [...prev, city.name]
+  );
+
+  // Keep newly added city available in the route list/map.
+  setRouteCities(prev => {
+    const exists = prev.some(
+      item => item.name === city.name
+    );
+
+    return exists ? prev : [...prev, city];
+  });
+
+  setCitySearch('');
+};
+
+const removeCity = cityName => {
+  setSelectedCities(prev =>
+    prev.filter(name => name !== cityName)
+  );
+};
 
 
   // --------------------------------------------------
@@ -615,17 +616,19 @@ console.log('Ride Data:', rideData);
     // SELECTED CITY OBJECTS
     // ------------------------------------------------
 
-    const selectedStopObjects =
-      routeCities.filter(city =>
-        selectedCities.includes(city.name),
-      );
-
+ const selectedStopObjects = routeCities.filter(
+  city => selectedCities.includes(city.name)
+);
 
     // ------------------------------------------------
     // FINAL ROUTE
     // ------------------------------------------------
 
     const finalRoute = {
+      from_latitude: rideData.pickupLocation.latitude,
+      from_longitude: rideData.pickupLocation.longitude,
+      to_latitude: rideData.dropLocation.latitude,
+      to_longitude: rideData.dropLocation.longitude,
       from: fromCity,
 
       to: toCity,
@@ -646,8 +649,7 @@ console.log('Ride Data:', rideData);
       duration_seconds:
         routeData.duration_seconds,
 
-      polyline:
-        routeData.polyline,
+     
 
       route_cities:
         routeCities,
@@ -655,7 +657,7 @@ console.log('Ride Data:', rideData);
 
 
     console.log(
-      '================================',
+      '================================',finalRoute
     );
 
     console.log(
@@ -663,10 +665,8 @@ console.log('Ride Data:', rideData);
       finalRoute,
     );
 
-    console.log(
-      '================================',
-    );
-
+   
+ 
 
     // ------------------------------------------------
     // NEXT SCREEN
@@ -675,8 +675,8 @@ console.log('Ride Data:', rideData);
     navigation.navigate(
       'SelectDate',
       {
-        routeData: finalRoute,
-        rideData: rideData,
+       
+        rideData: finalRoute,
       },
     );
   };
@@ -1209,436 +1209,181 @@ console.log('Ride Data:', rideData);
 
         {/* CITIES */}
 
-        <View
-          style={
-            styles.citySectionHeader
-          }
-        >
-          <View>
-            <Text
-              style={styles.sectionTitle}
-            >
-              Cities on Route
-            </Text>
-
-            <Text
-              style={
-                styles.sectionSubtitle
-              }
-            >
-              Add or remove cities from
-              your route
-            </Text>
-          </View>
-
-          <View
-            style={styles.countBadge}
-          >
-            <Text
-              style={styles.countText}
-            >
-              {selectedCities.length}
-            </Text>
-          </View>
-        </View>
+      
 
 
         {/* ROUTE TIMELINE */}
 
-        <View
-          style={styles.routeContainer}
-        >
 
-          {/* START */}
+        
+{/* CITIES ON ROUTE */}
 
+<View style={styles.citySectionHeader}>
+  <View>
+    <Text style={styles.sectionTitle}>
+      Intercity Stops
+    </Text>
+    <Text style={styles.sectionSubtitle}>
+      Select 3 cities or search to add more
+    </Text>
+  </View>
+
+  <View style={styles.countBadge}>
+    <Text style={styles.countText}>
+      {selectedCities.length}
+    </Text>
+  </View>
+</View>
+
+{/* SEARCH CITY */}
+
+<View style={styles.searchBox}>
+  <Text style={styles.searchIcon}>⌕</Text>
+
+  <TextInput
+    style={styles.searchInput}
+    placeholder="Search city to add..."
+    placeholderTextColor="#8A8F98"
+    value={citySearch}
+    onChangeText={setCitySearch}
+    autoCorrect={false}
+  />
+
+  {citySearch.length > 0 && (
+    <TouchableOpacity
+      onPress={() => setCitySearch('')}
+    >
+      <Text style={styles.clearSearch}>✕</Text>
+    </TouchableOpacity>
+  )}
+</View>
+
+{/* SEARCH RESULTS */}
+
+{citySearch.trim().length > 0 && (
+  <View style={styles.searchResults}>
+    {filteredCities.length > 0 ? (
+      filteredCities.map(city => {
+        const selected = selectedCities.includes(
+          city.name
+        );
+
+        return (
           <View
-            style={styles.routeRow}
+            key={city.id || city.name}
+            style={styles.searchResultRow}
           >
-            <View
-              style={styles.timeline}
-            >
-              <View
-                style={styles.startDot}
-              />
-
-              {routeCities.length >
-                0 && (
-                  <View
-                    style={
-                      styles.timelineLine
-                    }
-                  />
-                )}
-            </View>
-
-            <View
-              style={
-                styles.routeCityCard
-              }
-            >
-              <Text
-                style={styles.startLabel}
-              >
-                START
+            <View style={{ flex: 1 }}>
+              <Text style={styles.intermediateName}>
+                {city.name}
               </Text>
 
-              <Text
-                style={
-                  styles.routeCityName
-                }
-              >
-                {fromCity || 'Pickup'}
+              <Text style={styles.stopText}>
+                {selected ? 'Added to stops' : 'Add as a stop'}
               </Text>
             </View>
+
+            <TouchableOpacity
+              style={[
+                styles.searchAddButton,
+                selected && styles.disabledButton,
+              ]}
+              disabled={selected}
+              onPress={() => addCity(city)}
+            >
+              <Text style={styles.plusText}>
+                {selected ? '✓' : '+'}
+              </Text>
+            </TouchableOpacity>
           </View>
+        );
+      })
+    ) : (
+      <Text style={styles.emptySearch}>
+        No matching city found.
+      </Text>
+    )}
+  </View>
+)}
 
+{/* SELECTED AND AVAILABLE ROUTE CITIES */}
 
-          {/* INTERMEDIATE CITIES */}
+<View style={styles.routeContainer}>
+  {[
+    {
+      name: fromCity || 'Pickup',
+      type: 'START',
+    },
+ ...routeCities.filter(city =>
+  selectedCities.includes(city.name)
+),
+    {
+      name: toCity || 'Destination',
+      type: 'END',
+    },
+  ].map((item, index, list) => {
+    const isEndpoint =
+      item.type === 'START' || item.type === 'END';
 
-          {routeCities.length > 0 ? (
-            routeCities.map(
-              (city, index) => {
-                const selected =
-                  isSelected(
-                    city.name,
-                  );
+    const selected = selectedCities.includes(item.name);
 
-                return (
-                  <View
-                    key={
-                      city.id ??
-                      `${city.name}-${index}`
-                    }
-                    style={
-                      styles.routeRow
-                    }
-                  >
-                    <View
-                      style={
-                        styles.timeline
-                      }
-                    >
-                      <View
-                        style={[
-                          styles.cityDot,
-                          selected &&
-                          styles.selectedCityDot,
-                        ]}
-                      />
+    return (
+      <View
+        key={`${item.name}-${index}`}
+        style={styles.routeRow}
+      >
+        <View style={styles.timeline}>
+          <View
+            style={[
+              styles.cityDot,
+              isEndpoint && styles.endpointDot,
+              selected && styles.selectedCityDot,
+            ]}
+          />
 
-                      {index !==
-                        routeCities.length -
-                        1 && (
-                          <View
-                            style={
-                              styles.timelineLine
-                            }
-                          />
-                        )}
-                    </View>
-
-                    <View
-                      style={[
-                        styles.intermediateCard,
-                        selected &&
-                        styles.selectedCard,
-                      ]}
-                    >
-                      <View
-                        style={
-                          styles.cityInfo
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.intermediateName,
-                            selected &&
-                            styles.selectedCityName,
-                          ]}
-                        >
-                          {city.name}
-                        </Text>
-
-                        <Text
-                          style={
-                            styles.stopText
-                          }
-                        >
-                          {selected
-                            ? 'Included in route'
-                            : 'Not included'}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={
-                          styles.actionButtons
-                        }
-                      >
-
-                        {/* MINUS */}
-
-                        <TouchableOpacity
-                          activeOpacity={
-                            0.7
-                          }
-                          style={[
-                            styles.actionButton,
-                            !selected &&
-                            styles.disabledButton,
-                          ]}
-                          disabled={
-                            !selected
-                          }
-                          onPress={() =>
-                            removeCity(
-                              city.name,
-                            )
-                          }
-                        >
-                          <Text
-                            style={[
-                              styles.minusText,
-                              !selected &&
-                              styles.disabledText,
-                            ]}
-                          >
-                            −
-                          </Text>
-                        </TouchableOpacity>
-
-
-                        {/* PLUS */}
-
-                        <TouchableOpacity
-                          activeOpacity={
-                            0.7
-                          }
-                          style={[
-                            styles.actionButton,
-                            selected &&
-                            styles.disabledButton,
-                          ]}
-                          disabled={
-                            selected
-                          }
-                          onPress={() =>
-                            addCity(
-                              city.name,
-                            )
-                          }
-                        >
-                          <Text
-                            style={[
-                              styles.plusText,
-                              selected &&
-                              styles.disabledText,
-                            ]}
-                          >
-                            +
-                          </Text>
-                        </TouchableOpacity>
-
-                      </View>
-                    </View>
-                  </View>
-                );
-              },
-            )
-          ) : (
-            <View
-              style={
-                styles.noRouteBox
-              }
-            >
-              <Text
-                style={
-                  styles.noRouteTitle
-                }
-              >
-                No intermediate cities
-              </Text>
-
-              <Text
-                style={
-                  styles.noRouteText
-                }
-              >
-                The route API returned the
-                route successfully, but no
-                intermediate cities were
-                returned.
-              </Text>
-            </View>
+          {index < list.length - 1 && (
+            <View style={styles.timelineLine} />
           )}
-
-
-          {/* END */}
-
-          <View
-            style={styles.routeRow}
-          >
-            <View
-              style={styles.timeline}
-            >
-              {routeCities.length >
-                0 && (
-                  <View
-                    style={
-                      styles.timelineLineTop
-                    }
-                  />
-                )}
-
-              <View
-                style={styles.endDot}
-              />
-            </View>
-
-            <View
-              style={
-                styles.routeCityCard
-              }
-            >
-              <Text
-                style={styles.endLabel}
-              >
-                END
-              </Text>
-
-              <Text
-                style={
-                  styles.routeCityName
-                }
-              >
-                {toCity ||
-                  'Destination'}
-              </Text>
-            </View>
-          </View>
-
         </View>
 
-
-        {/* SELECTED SUMMARY */}
-
-        <View
-          style={styles.summaryCard}
-        >
-          <View
-            style={{ flex: 1 }}
-          >
+        <View style={styles.intermediateCard}>
+          <View style={styles.cityInfo}>
             <Text
-              style={
-                styles.summaryTitle
-              }
+              style={[
+                styles.intermediateName,
+                isEndpoint && styles.endpointName,
+              ]}
             >
-              Selected Cities
+              {item.name}
             </Text>
 
-            <Text
-              style={
-                styles.summaryRoute
-              }
-            >
-              {fromCity || 'Pickup'}
-
-              {selectedCities.length >
-                0 &&
-                ` → ${selectedCities.join(
-                  ' → ',
-                )}`}
-
-              {' → '}
-
-              {toCity ||
-                'Destination'}
+            <Text style={styles.stopText}>
+              {item.type ||
+                (selected ? 'Selected stop' : 'Available city')}
             </Text>
           </View>
 
-          <View
-            style={styles.summaryCount}
-          >
-            <Text
-              style={
-                styles.summaryCountNumber
-              }
+          {!isEndpoint && (
+            <TouchableOpacity
+              style={[
+                styles.searchAddButton,
+                !selected && styles.disabledButton,
+              ]}
+              disabled={!selected}
+              onPress={() => removeCity(item.name)}
             >
-              {selectedCities.length}
-            </Text>
-
-            <Text
-              style={
-                styles.summaryCountLabel
-              }
-            >
-              Stops
-            </Text>
-          </View>
+              <Text style={styles.minusText}>−</Text>
+            </TouchableOpacity>
+          )}
         </View>
+      </View>
+    );
+  })}
+</View>
+
+      
 
 
-        {/* DEBUG */}
-
-        {routeData && (
-          <View
-            style={styles.debugCard}
-          >
-            <Text
-              style={styles.debugTitle}
-            >
-              Route Details
-            </Text>
-
-            <Text
-              style={styles.debugText}
-            >
-              Distance:{' '}
-              {
-                routeData.distance_meters
-              }{' '}
-              meters
-            </Text>
-
-            <Text
-              style={styles.debugText}
-            >
-              Duration:{' '}
-              {routeData.duration}
-            </Text>
-
-            <Text
-              style={styles.debugText}
-            >
-              Route polyline:{' '}
-              {routeData.polyline
-                ? 'Available'
-                : 'Not available'}
-            </Text>
-
-            <Text
-              style={styles.debugText}
-            >
-              Decoded coordinates:{' '}
-              {routeCoordinates.length}
-            </Text>
-
-            <Text
-              style={styles.debugText}
-            >
-              Route cities:{' '}
-              {routeCities.length}
-            </Text>
-
-            <Text
-              style={styles.debugText}
-            >
-              Route legs:{' '}
-              {routeData.legs
-                ?.length || 0}
-            </Text>
-          </View>
-        )}
 
 
         <View
@@ -2363,4 +2108,83 @@ const styles = StyleSheet.create({
     fontSize: 22,
     marginLeft: 12,
   },
+  searchBox: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#FFFFFF',
+  borderWidth: 1,
+  borderColor: '#E2E5E9',
+  borderRadius: 12,
+  paddingHorizontal: 14,
+  minHeight: 52,
+  marginBottom: 12,
+},
+
+searchIcon: {
+  fontSize: 24,
+  color: '#2878E8',
+  marginRight: 10,
+},
+
+searchInput: {
+  flex: 1,
+  fontSize: 14,
+  color: '#202124',
+  paddingVertical: 10,
+},
+
+clearSearch: {
+  fontSize: 18,
+  color: '#777777',
+  padding: 5,
+},
+
+searchResults: {
+  backgroundColor: '#FFFFFF',
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: '#E2E5E9',
+  marginBottom: 16,
+  overflow: 'hidden',
+},
+
+searchResultRow: {
+  minHeight: 64,
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+  flexDirection: 'row',
+  alignItems: 'center',
+  borderBottomWidth: 1,
+  borderBottomColor: '#F0F1F3',
+},
+
+searchAddButton: {
+  width: 36,
+  height: 36,
+  borderRadius: 10,
+  backgroundColor: '#EAF2FF',
+  borderWidth: 1,
+  borderColor: '#C9DFFF',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginLeft: 10,
+},
+
+emptySearch: {
+  padding: 16,
+  fontSize: 13,
+  color: '#777777',
+},
+
+endpointDot: {
+  backgroundColor: '#20A464',
+  width: 15,
+  height: 15,
+  borderRadius: 8,
+},
+
+endpointName: {
+  color: '#202124',
+  fontWeight: '700',
+},
 });
