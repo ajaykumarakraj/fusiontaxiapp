@@ -38,7 +38,7 @@ const ProfileScreen = () => {
       title: 'Edit Travel Preferences',
       subtitle: 'Edit Travel Preferences....',
       icon: 'card-outline',
-      screen: 'Travepreferences',
+      screen: 'TravelPreferences',
     },
   ];
 

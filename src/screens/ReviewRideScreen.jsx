@@ -123,27 +123,14 @@ console.log('ReviewRideScreen - rideData:', rideData);
       const pickupCoordinates = getCoordinates(pickup);
       const dropCoordinates = getCoordinates(drop);
 
-      const formattedStops = stops.map(stop => {
-        const address = getAddress(stop);
-        const coordinates = getCoordinates(address);
 
-        // stopDetails mein coordinates hon to unhe priority dein
-        const stopDetail =
-          typeof stop === 'object' ? stop : findLocation(address);
-
-        return {
-          address,
-          latitude:
-            stopDetail?.latitude ??
-            stopDetail?.lat ??
-            coordinates.latitude,
-
-          longitude:
-            stopDetail?.longitude ??
-            stopDetail?.lng ??
-            coordinates.longitude,
-        };
-      });
+const formattedStops = (rideData.stopDetails || []).map(stop => ({
+  name: stop.name,
+  address: stop.address,
+  latitude: Number(stop.latitude),
+  longitude: Number(stop.longitude),
+  place_id: stop.place_id,
+}));
 
       const payload = {
         vehicle_id: car.id,
@@ -192,7 +179,8 @@ console.log('ReviewRideScreen - rideData:', rideData);
         [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('RideSuccess'),
+            onPress: () => navigation.navigate('Your Rides'),
+             
           },
         ],
       );

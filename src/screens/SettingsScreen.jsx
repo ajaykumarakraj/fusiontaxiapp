@@ -12,14 +12,12 @@ import Icon from 'react-native-vector-icons/Ionicons';
 const SettingsScreen = ({navigation}) => {
   const handlePress = item => {
     if (item === 'Help & Support') {
-      navigation.navigate('Help');
+      navigation.navigate('HelpSupport');
     } else if (item === 'Payment Method') {
       navigation.navigate('PaymentMethod');
     } else if (item === 'Terms & Conditions') {
       navigation.navigate('TermsConditions');
-    } else if (item === 'Change Password') {
-      navigation.navigate('ChangePassword');
-    }
+    } 
   };
 
   const options = [
@@ -38,11 +36,11 @@ const SettingsScreen = ({navigation}) => {
       subtitle: 'Read our terms and conditions',
       icon: 'document-text-outline',
     },
-    {
-      title: 'Change Password',
-      subtitle: 'Update your account password',
-      icon: 'lock-closed-outline',
-    },
+    // {
+    //   title: 'Change Password',
+    //   subtitle: 'Update your account password',
+    //   icon: 'lock-closed-outline',
+    // },
   ];
 
   return (

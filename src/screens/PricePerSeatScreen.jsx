@@ -16,16 +16,15 @@ const PricePerSeatScreen = ({ navigation, route }) => {
   // Previous screens ka complete data
   const rideData = route?.params?.rideData || {};
 
-  const [price, setPrice] = useState(
-    rideData?.pricePerSeat || 300
-  );
+ const [price, setPrice] = useState(
+  Math.round(Number(rideData?.distance_km || 0) * 3)
+);
 
   const increasePrice = () => {
     if (price < MAX_PRICE) {
       setPrice(price + STEP);
     }
   };
-
   const decreasePrice = () => {
     if (price > MIN_PRICE) {
       setPrice(price - STEP);
@@ -145,7 +144,7 @@ const PricePerSeatScreen = ({ navigation, route }) => {
         </View>
 
         {/* Helper */}
-        <View style={styles.helperContainer}>
+        {/* <View style={styles.helperContainer}>
           <Icon
             name="information-circle-outline"
             size={18}
@@ -156,7 +155,7 @@ const PricePerSeatScreen = ({ navigation, route }) => {
             Min ₹{MIN_PRICE} • Max ₹{MAX_PRICE} •
             Step ₹{STEP}
           </Text>
-        </View>
+        </View> */}
 
         {/* Passenger Info */}
         {rideData?.passengers && (

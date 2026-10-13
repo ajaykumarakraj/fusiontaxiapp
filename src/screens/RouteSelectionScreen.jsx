@@ -103,7 +103,7 @@ console.log('Ride Data:', rideData.dropLocation.latitude);
   const [showToDropdown, setShowToDropdown] =
     useState(false);
 const [citySearch, setCitySearch] = useState('');
-console.log('City Search:', citySearch);
+console.log('routeCities:', routeCities);
   // --------------------------------------------------
   // INITIAL SOURCE / DESTINATION
   // --------------------------------------------------
@@ -616,10 +616,17 @@ const removeCity = cityName => {
     // SELECTED CITY OBJECTS
     // ------------------------------------------------
 
- const selectedStopObjects = routeCities.filter(
-  city => selectedCities.includes(city.name)
-);
-
+const selectedStopObjects = routeCities
+  .filter(city => selectedCities.includes(city.name))
+  .map(city => ({
+    name: city.name,
+    address: city.address,
+    latitude: city.latitude,
+    longitude: city.longitude,
+    place_id: city.place_id,
+    state: city.state,
+    country: city.country,
+  }));
     // ------------------------------------------------
     // FINAL ROUTE
     // ------------------------------------------------
