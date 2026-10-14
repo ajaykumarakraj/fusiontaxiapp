@@ -463,7 +463,7 @@ const RideList = ({ route }) => {
 
       {/* Results heading */}
       <View style={styles.resultsHeader}>
-        <Text style={styles.resultsTitle}>Your rides</Text>
+        <Text style={styles.resultsTitle}>Your rides </Text>
         {!loading && !error && (
           <Text style={styles.resultsCount}>
             {rides.length} {rides.length === 1 ? 'ride' : 'rides'}

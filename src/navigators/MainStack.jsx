@@ -23,6 +23,8 @@ import SelectCarScreen from '../screens/SelectCars'
 import RidesScreen from '../screens/RidesScreen'
 import HelpSupportScreen from "../screens/HelpSupportScreen"
 import TermsConditions from "../screens/TermsConditionsScreen"
+import RidePlaneScreen from "../screens/RidePlanScreen"
+import CustomerDetailsScreen from "../screens/CustomerDetailsScreen"
 const Stack=createNativeStackNavigator()
 const MainStack = () => {
   return (
@@ -49,6 +51,8 @@ const MainStack = () => {
         <Stack.Screen name="Your Rides" component={RidesScreen}/>
         <Stack.Screen name="HelpSupport" component={HelpSupportScreen}/>
         <Stack.Screen name="TermsConditions" component={TermsConditions}/>
+        <Stack.Screen name='RidePlane' component={RidePlaneScreen}/>
+        <Stack.Screen name="CustomerDetails" component={CustomerDetailsScreen}/>
      </Stack.Navigator>
   )
 }

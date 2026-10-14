@@ -10,7 +10,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-
+import { useNavigation } from '@react-navigation/native';
 
 
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -29,7 +29,7 @@ const RidesScreen = () => {
 
   // Screen focus hone par rides refresh hongi
 
-
+ const navigation = useNavigation();
   const getRides = async (isRefresh = false) => {
     try {
       if (isRefresh) {
@@ -305,9 +305,22 @@ const handlePublish = (item) => {
     const status = item.status || 'unknown';
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+  style={styles.card}
+  activeOpacity={0.8}
+  onPress={() => {
+    navigation.navigate('RidePlane', {
+      ride: item,
+    });
+  }}
+>
+      <View >
         {/* Route */}
-        <View style={styles.route}>
+      
+
+        <View style={styles.route}
+        
+        >
           <View style={styles.locationContainer}>
             <View style={styles.locationDot} />
             <Text style={styles.city} numberOfLines={2}>
@@ -452,6 +465,7 @@ const handlePublish = (item) => {
           )}
         </View>
       </View>
+</TouchableOpacity>
     );
   };
 
