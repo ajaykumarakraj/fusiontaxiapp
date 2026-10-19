@@ -25,6 +25,7 @@ import HelpSupportScreen from "../screens/HelpSupportScreen"
 import TermsConditions from "../screens/TermsConditionsScreen"
 import RidePlaneScreen from "../screens/RidePlanScreen"
 import CustomerDetailsScreen from "../screens/CustomerDetailsScreen"
+import ChatScreen from "../screens/ChatScreen"
 const Stack=createNativeStackNavigator()
 const MainStack = () => {
   return (
@@ -53,10 +54,10 @@ const MainStack = () => {
         <Stack.Screen name="TermsConditions" component={TermsConditions}/>
         <Stack.Screen name='RidePlane' component={RidePlaneScreen}/>
         <Stack.Screen name="CustomerDetails" component={CustomerDetailsScreen}/>
+        <Stack.Screen name="ChatScreen" component={ChatScreen}/>
      </Stack.Navigator>
   )
 }
 
 export default MainStack
 
-const styles = StyleSheet.create({})

@@ -122,6 +122,8 @@ console.log("location",location.formatted_address,location.latitude,location.lon
   formatted_address: location.formatted_address,
   latitude: location.latitude,
   longitude: location.longitude,
+  from_place_id:location.place_id
+
 };
         navigation.navigate("Dropoff", {
           rideData: {

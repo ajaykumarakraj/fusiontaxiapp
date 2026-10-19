@@ -107,11 +107,11 @@ const DropCityScreen = ({ navigation, route }) => {
         // ==========================================
         // DROP LOCATION OBJECT
         // ==========================================
-
         const dropLocation = {
           formatted_address: location.formatted_address,
           latitude: location.latitude,
           longitude: location.longitude,
+          to_place_id:location.place_id
         };
 
         // ==========================================

@@ -30,7 +30,7 @@ const InboxScreen = ({ navigation }) => {
     <TouchableOpacity
       style={styles.chatCard}
       onPress={() => {
-        // navigation.navigate('ChatScreen', { user: item });
+        navigation.navigate('ChatScreen', { user: item });
         console.log('Open chat:', item.name);
       }}
     >

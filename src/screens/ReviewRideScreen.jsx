@@ -139,11 +139,12 @@ const formattedStops = (rideData.stopDetails || []).map(stop => ({
         from_address: pickup,
         from_latitude: rideData.from_latitude,
         from_longitude: rideData.from_longitude,
+from_place_id:rideData.from_place_id,
 
         to_address: drop,
         to_latitude: rideData.to_latitude ,
         to_longitude: rideData.to_longitude ,
-
+to_place_id:rideData.to_place_id,
         departure_date: rideData.date,
         departure_time: rideData.time,
 
@@ -159,6 +160,8 @@ const formattedStops = (rideData.stopDetails || []).map(stop => ({
         music_allowed: true,
 
         stops: formattedStops,
+        total_distance_km:rideData.distance_km,
+estimated_duration_second:rideData.duration_seconds
       };
 
       console.log('Post Ride Payload:', payload);

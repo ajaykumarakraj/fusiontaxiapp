@@ -20,12 +20,24 @@ const API_BASE = 'https://api.squarebigha.com/oldApi/api/v1';
 const RideDetails = ({ route }) => {
   const navigation = useNavigation();
   const { ride, from, to } = route.params;
-
+const [showStops, setShowStops] = useState(false);
+const [showPreferences, setShowPreferences] = useState(false);
   const [rideDetail, setRideDetail] = useState(null);
   const [loading, setLoading] = useState(true);
 
 
+const formatDuration = (seconds) => {
+  if (seconds == null || isNaN(seconds)) {
+    return 'N/A';
+  }
 
+  const totalSeconds = Number(seconds);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const remainingSeconds = totalSeconds % 60;
+
+  return `${hours}h ${minutes}m ${remainingSeconds}s`;
+};
 
 
 const booking=async()=>{
@@ -42,10 +54,10 @@ try {
       const token = credentials.password;
    const   payload={
 
-    "seats_requested": 2,
-    "pickup_stop_id": 3,
-    "dropoff_stop_id": 4,
-    "passenger_note": "I have one small bag."
+    seats_requested: 2,
+    pickup_stop_id: 3,
+    dropoff_stop_id: 4,
+    passenger_note: "I have one small bag."
 
       }
   const res=await axios.post(`https://api.squarebigha.com/oldApi/api/v1/rides/${ride.uuid}/book`,payload,{
@@ -205,8 +217,7 @@ console.log("rideDetail",rideDetail)
         {/* Journey */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Journey Details</Text>
-
-          <InfoRow
+            <InfoRow
             icon="radio-button-on"
             label="Pickup"
             value={rideDetail.from_address || from}
@@ -217,19 +228,134 @@ console.log("rideDetail",rideDetail)
             label="Destination"
             value={rideDetail.to_address || to}
           />
+           </View>
 
-          <InfoRow
-            icon="calendar-outline"
-            label="Departure Date"
-            value={formatDate(rideDetail.departure_date)}
+             <View style={styles.card}>
+<View style={styles.journeydate}>
+  <View style={styles.journeyItem}>
+    <InfoRow
+      icon="calendar-outline"
+      label="Departure Date"
+      value={formatDate(rideDetail.departure_date)}
+    />
+  </View>
+
+  <View style={styles.journeyItem}>
+    <InfoRow
+      icon="time-outline"
+      label="Departure Time"
+      value={rideDetail.departure_time || 'Not specified'}
+    />
+  </View>
+</View>
+        
+</View>
+       
+
+      
+       
+
+        {/* Stops */}
+        {stops.length > 0 && (
+  <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.stopsHeader}
+      onPress={() => setShowStops(!showStops)}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.sectionTitle}>
+        Route Stops ({stops.length})
+      </Text>
+
+      <Icon
+        name={showStops ? 'chevron-up-outline' : 'chevron-down-outline'}
+        size={22}
+        color="#333"
+      />
+    </TouchableOpacity>
+
+    {showStops &&
+      stops.map((stop, index) => (
+        <View style={styles.stopRow} key={stop.id ?? index}>
+          <Icon
+            name="location-outline"
+            size={20}
+            color="#f40b0f"
           />
 
-          <InfoRow
-            icon="time-outline"
-            label="Departure Time"
-            value={rideDetail.departure_time || 'Not specified'}
-          />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.value}>
+              Stop {index + 1}
+            </Text>
 
+            <Text style={styles.stopAddress}>
+              {stop.address || 'Address not available'}
+            </Text>
+          </View>
+        </View>
+      ))}
+  </View>
+)}
+
+        {/* Vehicle */}
+        <View style={styles.card}>
+  <Text style={styles.sectionTitle}>Vehicle Details</Text>
+
+  <View style={styles.vehicleGrid}>
+    <View style={styles.vehicleItem}>
+      <InfoRow
+        icon="car-outline"
+        label="Vehicle"
+        value={[vehicle.make, vehicle.model, vehicle.variant]
+          .filter(Boolean)
+          .join(' ') || 'Not specified'}
+      />
+    </View>
+
+    <View style={styles.vehicleItem}>
+      <InfoRow
+        icon="color-palette-outline"
+        label="Color"
+        value={vehicle.color || 'Not specified'}
+      />
+    </View>
+
+    {/* <View style={styles.vehicleItem}>
+      <InfoRow
+        icon="calendar-outline"
+        label="Year"
+        value={vehicle.year || 'Not specified'}
+      />
+    </View> */}
+
+    <View style={styles.vehicleItem}>
+      <InfoRow
+        icon="people-outline"
+        label="Seats"
+        value={vehicle.total_seats || 'N/A'}
+      />
+    </View>
+
+    <View style={styles.vehicleItem}>
+      <InfoRow
+        icon="document-text-outline"
+        label="Registration"
+        value={vehicle.registration_number || 'Not specified'}
+      />
+    </View>
+  </View>
+</View>
+        {/* Fare */}
+      <View style={styles.card}>
+  <Text style={styles.sectionTitle}>Fare Details</Text>
+
+  <Text style={styles.price}>
+    ₹{Number(rideDetail.price_per_seat || 0).toLocaleString('en-IN')}
+    <Text style={styles.perSeat}> / seat</Text>
+  </Text>
+
+  <View style={styles.fareGrid}>
+    <View style={styles.fareItem}>
           {rideDetail.total_distance_km != null && (
             <InfoRow
               icon="navigate-outline"
@@ -237,125 +363,74 @@ console.log("rideDetail",rideDetail)
               value={`${rideDetail.total_distance_km} km`}
             />
           )}
-        </View>
-
-        {/* Stops */}
-        {stops.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>
-              Route Stops ({stops.length})
-            </Text>
-
-            {stops.map((stop, index) => (
-              <View style={styles.stopRow} key={stop.id ?? index}>
-                <Icon
-                  name="location-outline"
-                  size={20}
-                  color="#f40b0f"
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.value}>
-                    Stop {index + 1}
-                  </Text>
-                  <Text style={styles.stopAddress}>
-                    {stop.address || 'Address not available'}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Vehicle */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Vehicle Details</Text>
-
           <InfoRow
-            icon="car-outline"
-            label="Vehicle"
-            value={[vehicle.make, vehicle.model, vehicle.variant]
-              .filter(Boolean)
-              .join(' ') || 'Not specified'}
-          />
+          icon="time-outline"
+           label="Estimated Duration"
+         value={formatDuration(rideDetail.estimated_duration_second)}
+        />
+      <InfoRow
+        icon="people-outline"
+        label="Available Seats"
+        value={rideDetail.available_seats ?? 'N/A'}
+      />
+      <InfoRow
+        icon="card-outline"
+        label="Booking Type"
+        value={rideDetail.booking_type || 'N/A'}
+      />
+    </View>
 
-          <InfoRow
-            icon="color-palette-outline"
-            label="Color"
-            value={vehicle.color}
-          />
 
-          <InfoRow
-            icon="calendar-outline"
-            label="Year"
-            value={vehicle.year}
-          />
-
-          <InfoRow
-            icon="people-outline"
-            label="Vehicle Seats"
-            value={vehicle.total_seats}
-          />
-
-          <InfoRow
-            icon="document-text-outline"
-            label="Registration"
-            value={vehicle.registration_number}
-          />
-        </View>
-
-        {/* Fare */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Fare Details</Text>
-
-          <Text style={styles.price}>
-            ₹{Number(rideDetail.price_per_seat || 0).toLocaleString('en-IN')}
-            <Text style={styles.perSeat}> / seat</Text>
-          </Text>
-
-          <InfoRow
-            icon="people-outline"
-            label="Available Seats"
-            value={rideDetail.available_seats}
-          />
-
-          <InfoRow
-            icon="card-outline"
-            label="Booking Type"
-            value={rideDetail.booking_type}
-          />
-
-          <InfoRow
-            icon="briefcase-outline"
-            label="Luggage"
-            value={rideDetail.luggage}
-          />
-        </View>
+  
+  </View>
+</View>
 
         {/* Preferences */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Ride Preferences</Text>
+       
+<View style={styles.card}>
+  <TouchableOpacity
+    style={styles.preferencesHeader}
+    onPress={() => setShowPreferences(!showPreferences)}
+    activeOpacity={0.7}
+  >
+    <Text style={styles.sectionTitle}>
+      Ride Preferences
+    </Text>
 
-          {[
-            ['Smoking allowed', rideDetail.smoking_allowed],
-            ['Pets allowed', rideDetail.pets_allowed],
-            ['Music allowed', rideDetail.music_allowed],
-            ['Women only', rideDetail.women_only],
-            ['Door-to-door', rideDetail.door_to_door],
-          ].map(([label, value]) => (
-            <View style={styles.preferenceRow} key={label}>
-              <Text style={styles.preferenceLabel}>{label}</Text>
-              <Text style={styles.value}>
-                {value === true || value === 1 ? 'Yes' : 'No'}
-              </Text>
-            </View>
-          ))}
+    <Icon
+      name={showPreferences ? 'chevron-up-outline' : 'chevron-down-outline'}
+      size={22}
+      color="#333"
+    />
+  </TouchableOpacity>
 
-          {rideDetail.notes ? (
-            <Text style={styles.notes}>
-              Note: {rideDetail.notes}
-            </Text>
-          ) : null}
+  {showPreferences && (
+    <>
+      {[
+        ['Smoking allowed', rideDetail.smoking_allowed],
+        ['Pets allowed', rideDetail.pets_allowed],
+        ['Music allowed', rideDetail.music_allowed],
+        ['Women only', rideDetail.women_only],
+        ['Door-to-door', rideDetail.door_to_door],
+      ].map(([label, value]) => (
+        <View style={styles.preferenceRow} key={label}>
+          <Text style={styles.preferenceLabel}>{label}</Text>
+
+          <Text style={styles.value}>
+            {value === true || value === 1 ? 'Yes' : 'No'}
+          </Text>
         </View>
+      ))}
+
+      {rideDetail.notes ? (
+        <Text style={styles.notes}>
+          Note: {rideDetail.notes}
+        </Text>
+      ) : null}
+    </>
+  )}
+</View>
+
 
         {/* Driver info */}
         <View style={styles.card}>
@@ -554,4 +629,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+ journeydate: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  width: '100%',
+},
+
+journeyItem: {
+  flex: 1,
+  minWidth: 0,
+},
+stopsHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+},
+
+sectionTitle: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  color: '#222',
+},
+vehicleGrid: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  marginHorizontal: -5,
+},
+
+vehicleItem: {
+  width: '50%',
+  paddingHorizontal: 5,
+},
+fareGrid: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  marginHorizontal: -4,
+},
+
+fareItem: {
+  width: '50%',
+  paddingHorizontal: 4,
+},
+
+
+
+sectionTitle: {
+  fontSize: 16,
+  fontWeight: '600',
+  marginBottom: 6,
+},
+
+price: {
+  fontSize: 22,
+  fontWeight: 'bold',
+  marginBottom: 6,
+},
+
+preferencesHeader:{
+  display:"flex",
+  flexDirection:"row",
+  justifyContent:"space-between"
+}
 });

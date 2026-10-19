@@ -61,7 +61,7 @@ const RouteSelectionScreen = ({
   // --------------------------------------------------
 
   const rideData = route?.params?.rideData || {};
-console.log('Ride Data:', rideData.dropLocation.latitude);
+console.log('Ride Data:', rideData);
   const pickupLocation =
     rideData?.pickupLocation || null;
 
@@ -632,6 +632,8 @@ const selectedStopObjects = routeCities
     // ------------------------------------------------
 
     const finalRoute = {
+      to_place_id:rideData.dropLocation.to_place_id,
+        from_place_id:rideData.pickupLocation.from_place_id,
       from_latitude: rideData.pickupLocation.latitude,
       from_longitude: rideData.pickupLocation.longitude,
       to_latitude: rideData.dropLocation.latitude,
@@ -671,9 +673,6 @@ const selectedStopObjects = routeCities
       'FINAL ROUTE:',
       finalRoute,
     );
-
-   
- 
 
     // ------------------------------------------------
     // NEXT SCREEN
