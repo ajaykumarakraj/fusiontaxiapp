@@ -20,12 +20,14 @@ import RouteSelectionScreen from '../screens/RouteSelectionScreen'
 import  SelectTimeScreen from '../screens/SelectTimeScreen'
 import ReviewRideScreen from '../screens/ReviewRideScreen'
 import SelectCarScreen from '../screens/SelectCars'
-import RidesScreen from '../screens/RidesScreen'
+// import PublishRides from '../screens/PublishRides'
 import HelpSupportScreen from "../screens/HelpSupportScreen"
 import TermsConditions from "../screens/TermsConditionsScreen"
 import RidePlaneScreen from "../screens/RidePlanScreen"
 import CustomerDetailsScreen from "../screens/CustomerDetailsScreen"
 import ChatScreen from "../screens/ChatScreen"
+import PublishScreen from "../screens/PublishScreen"
+import PublishSuccess from "../screens/PublishSuccessScreen"
 const Stack=createNativeStackNavigator()
 const MainStack = () => {
   return (
@@ -49,12 +51,15 @@ const MainStack = () => {
         <Stack.Screen name="SelectTime" component={SelectTimeScreen}/>
         <Stack.Screen name="ReviewRide" component={ReviewRideScreen}/>
         <Stack.Screen name="SelectCar" component={SelectCarScreen}/>
-        <Stack.Screen name="Your Rides" component={RidesScreen}/>
+        {/* <Stack.Screen name="PublishRides" component={PublishRides}/> */}
         <Stack.Screen name="HelpSupport" component={HelpSupportScreen}/>
         <Stack.Screen name="TermsConditions" component={TermsConditions}/>
         <Stack.Screen name='RidePlane' component={RidePlaneScreen}/>
         <Stack.Screen name="CustomerDetails" component={CustomerDetailsScreen}/>
         <Stack.Screen name="ChatScreen" component={ChatScreen}/>
+        <Stack.Screen name="NewPublishScreen" component={PublishScreen}/>
+        <Stack.Screen name="PublishSuccess" component={PublishSuccess}/>
+       
      </Stack.Navigator>
   )
 }

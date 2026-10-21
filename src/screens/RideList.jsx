@@ -150,24 +150,24 @@ const RideList = ({ route }) => {
     );
   };
 
-  const getCarName = (item) => {
-    const vehicle = item.vehicle || item.car || {};
+  // const getCarName = (item) => {
+  //   const vehicle = item.vehicle || item.car || {};
 
-    if (typeof vehicle === 'string') {
-      return vehicle;
-    }
+  //   if (typeof vehicle === 'string') {
+  //     return vehicle;
+  //   }
 
-    return [
-      vehicle.make || vehicle.brand,
-      vehicle.model,
-      vehicle.variant,
-    ]
-      .filter(Boolean)
-      .join(' ') ||
-      item.car_name ||
-      item.vehicle_name ||
-      'Car details unavailable';
-  };
+  //   return [
+  //     vehicle.make || vehicle.brand,
+  //     vehicle.model,
+  //     vehicle.variant,
+  //   ]
+  //     .filter(Boolean)
+  //     .join(' ') ||
+  //     item.car_name ||
+  //     item.vehicle_name ||
+  //     'Car details unavailable';
+  // };
 
   const getPrice = (item) => {
     const value =
@@ -217,7 +217,7 @@ const RideList = ({ route }) => {
 
   const renderRide = ({ item, index }) => {
     const driverName = getDriverName(item);
-    const carName = getCarName(item);
+    // const carName = getCarName(item);
     const price = getPrice(item);
     const time = getDepartureTime(item);
     const seats = getSeats(item);
@@ -325,12 +325,12 @@ const RideList = ({ route }) => {
     : ''}
 </Text>
           </View>
-          <View style={styles.detailItem}>
+          {/* <View style={styles.detailItem}>
             <Icon name="car-outline" size={18} color="#777" />
             <Text style={styles.detailText} numberOfLines={1}>
               {carName}
             </Text>
-          </View>
+          </View> */}
         </View>
 
         <View style={styles.cardDivider} />

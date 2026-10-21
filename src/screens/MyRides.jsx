@@ -18,15 +18,15 @@ import axios from 'axios';
 import * as Keychain from 'react-native-keychain';
 import { useFocusEffect } from '@react-navigation/native';
 
-const API_URL = 'https://api.squarebigha.com/oldApi/api/v1/rides';
+const API_URL = 'https://api.squarebigha.com/oldApi/api/v1/my-bookings';
 
-const RidesScreen = () => {
+const MyRides = () => {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [ridesData, setRidesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-
+console.log("ridesData",ridesData)
   // Screen focus hone par rides refresh hongi
 
  const navigation = useNavigation();
@@ -49,16 +49,16 @@ const RidesScreen = () => {
       }
 
       const response = await axios.get(API_URL, {
-        params: {
-          category: 'all',
-        },
+        // params: {
+        //   category: 'all',
+        // },
         headers: {
           Authorization: `Bearer ${credentials.password}`,
           Accept: 'application/json',
         },
       });
 
-      const rides = response.data?.data;
+      const rides = response.data?.data.data;
 
       setRidesData(Array.isArray(rides) ? rides : []);
 
@@ -92,67 +92,67 @@ const RidesScreen = () => {
   //   );
   // };
 
-const handlePublish = (item) => {
-  Alert.alert(
-    'Publish Ride',
-    `Kya aap ride #${item.id} publish karna chahte hain?`,
-    [
-      {
-        text: 'No',
-        style: 'cancel',
-      },
-      {
-        text: 'Yes, Publish',
-        onPress: async () => {
-          try {
-            const credentials = await Keychain.getGenericPassword();
+// const handlePublish = (item) => {
+//   Alert.alert(
+//     'Publish Ride',
+//     `Kya aap ride #${item.id} publish karna chahte hain?`,
+//     [
+//       {
+//         text: 'No',
+//         style: 'cancel',
+//       },
+//       {
+//         text: 'Yes, Publish',
+//         onPress: async () => {
+//           try {
+//             const credentials = await Keychain.getGenericPassword();
 
-            if (!credentials || !credentials.password) {
-              Alert.alert(
-                'Authentication Error',
-                'Please login again.'
-              );
-              return;
-            }
+//             if (!credentials || !credentials.password) {
+//               Alert.alert(
+//                 'Authentication Error',
+//                 'Please login again.'
+//               );
+//               return;
+//             }
 
-            const response = await axios.post(
-              `https://api.squarebigha.com/oldApi/api/v1/rides/${item.uuid}/publish`,
-              {},
-              {
-                headers: {
-                  Authorization: `Bearer ${credentials.password}`,
-                  Accept: 'application/json',
-                  'Content-Type': 'application/json',
-                },
-              }
-            );
+//             const response = await axios.post(
+//               `https://api.squarebigha.com/oldApi/api/v1/rides/${item.uuid}/publish`,
+//               {},
+//               {
+//                 headers: {
+//                   Authorization: `Bearer ${credentials.password}`,
+//                   Accept: 'application/json',
+//                   'Content-Type': 'application/json',
+//                 },
+//               }
+//             );
 
-            console.log('Publish response:', response.data);
+//             console.log('Publish response:', response.data);
 
-            Alert.alert(
-              'Success',
-              response.data?.message || 'Ride published successfully.'
-            );
+//             Alert.alert(
+//               'Success',
+//               response.data?.message || 'Ride published successfully.'
+//             );
 
-            await getRides();
-          } catch (error) {
-            console.log(
-              'Publish API error:',
-              error.response?.status,
-              error.response?.data || error.message
-            );
+//             await getRides();
+//           } catch (error) {
+//             console.log(
+//               'Publish API error:',
+//               error.response?.status,
+//               error.response?.data || error.message
+//             );
 
-            Alert.alert(
-              'Error',
-              error.response?.data?.message ||
-                'Ride publish nahi ho payi. Please try again.'
-            );
-          }
-        },
-      },
-    ]
-  );
-};
+//             Alert.alert(
+//               'Error',
+//               error.response?.data?.message ||
+//                 'Ride publish nahi ho payi. Please try again.'
+//             );
+//           }
+//         },
+//       },
+//     ]
+//   );
+// };
 
   const handleCancel = (item) => {
   Alert.alert(
@@ -277,32 +277,30 @@ const handlePublish = (item) => {
 
   const renderRide = ({ item }) => {
     const from =
-      item.from_address || item.from || 'Unknown location';
+      item.ride.from_address || item.from || 'Unknown location';
 
     const to =
-      item.to_address || item.to || 'Unknown location';
+      item.ride.to_address || item.to || 'Unknown location';
 
-    const departureDate = getRideDate(item);
+    // const departureDate = getRideDate(item);
 
-    const date = formatDate(departureDate);
+    const date = formatDate(item.ride.departure_date);
 
     const time = formatTime(
-      item.departure_time || item.time
+      item.ride.departure_time || item.ride.time
     );
 
     const seats =
-      item.available_seats ??
-      item.available_passenger_seats ??
-      item.seats ??
+      item.seats_requested ??
+   
       0;
 
     const price =
-      item.price_per_seat ??
-      item.pricePerSeat ??
-      item.price ??
+      item.total_amount ??
+    
       0;
 
-    const status = item.status || 'unknown';
+   
 
     return (
       <TouchableOpacity
@@ -372,7 +370,7 @@ const handlePublish = (item) => {
               color="#666"
             />
             <Text style={styles.infoText}>
-              {seats} available seats
+              {seats} Seats Requested
             </Text>
           </View>
 
@@ -383,72 +381,27 @@ const handlePublish = (item) => {
               color="#666"
             />
             <Text style={styles.infoText}>
-              {item.vehicle?.make || 'Vehicle'}{' '}
-              {item.vehicle?.model || ''}
+              {item.ride.vehicle?.make || 'Vehicle'}{' '}
+             
             </Text>
           </View>
         </View>
 
-        {/* Price and status */}
-        <View style={styles.footer}>
-          <View>
-            <Text style={styles.price}>
-              ₹{Number(price).toLocaleString('en-IN')}
-            </Text>
-            <Text style={styles.priceLabel}>per seat</Text>
-          </View>
-
-          <View
-            style={[
-              styles.statusBadge,
-              status.toLowerCase() === 'draft' &&
-                styles.draftBadge,
-              status.toLowerCase() === 'published' &&
-                styles.publishedBadge,
-              status.toLowerCase() === 'cancelled' &&
-                styles.cancelledBadge,
-            ]}
-          >
-            <Text style={styles.statusText}>
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </Text>
-          </View>
-        </View>
+      
 
         {/* Actions */}
         <View style={styles.actionRow}>
-          {/* <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={() => handleEdit(item)}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="create-outline"
-              size={17}
-              color="#222"
-            />
-            <Text style={styles.editButtonText}>Edit</Text>
-          </TouchableOpacity> */}
-
-          {status.toLowerCase() === 'draft' && (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.publishButton]}
-              onPress={() => handlePublish(item)}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name="cloud-upload-outline"
-                size={17}
-                color="#fff"
-              />
-              <Text style={styles.publishButtonText}>
-                Publish
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {status.toLowerCase() !== 'cancelled' && (
-            <TouchableOpacity
+        
+ <View>
+      <Text style={styles.priceLabel}> Total Price </Text>
+            <Text style={styles.price}>
+            ₹{Number(price).toLocaleString('en-IN')}
+            </Text>
+          
+          </View>
+        
+        <View>
+                <TouchableOpacity
               style={[styles.actionButton, styles.cancelButton]}
               onPress={() => handleCancel(item)}
               activeOpacity={0.8}
@@ -462,7 +415,8 @@ const handlePublish = (item) => {
                 Cancel
               </Text>
             </TouchableOpacity>
-          )}
+        </View>
+        
         </View>
       </View>
 </TouchableOpacity>
@@ -471,12 +425,16 @@ const handlePublish = (item) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Your Rides</Text>
+   <View style={styles.managebox}>
+  <View style={styles.manageInfo}>
+    <Text style={styles.header}>My Rides</Text>
+    <Text style={styles.subtitle}>
+      Manage your  rides
+    </Text>
+  </View>
 
-      <Text style={styles.subtitle}>
-        Manage your posted rides
-      </Text>
-
+ 
+</View>
       {/* Upcoming and Past tabs */}
       <View style={styles.tabs}>
         <TouchableOpacity
@@ -575,7 +533,7 @@ const handlePublish = (item) => {
   );
 };
 
-export default RidesScreen;
+export default MyRides;
 
 const styles = StyleSheet.create({
   container: {
@@ -753,6 +711,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 12,
     borderTopWidth: 1,
+    justifyContent:"space-between",
     borderTopColor: '#eee',
   },
 
@@ -852,4 +811,63 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
   },
+  publishButton: {
+  backgroundColor: '#2563EB',
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  borderRadius: 8,
+  alignSelf: 'flex-start',
+  marginTop: 10,
+},
+
+publishButtonText: {
+  color: '#FFFFFF',
+  fontSize: 14,
+  fontWeight: '600',
+},
+managebox: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingHorizontal: 18,
+  paddingVertical: 20,
+  backgroundColor: '#FFFFFF',
+  borderRadius: 14,
+  marginHorizontal: 15,
+  marginTop: 15,
+  marginBottom: 12,
+  elevation: 2,
+},
+
+manageInfo: {
+  flex: 1,
+  marginRight: 10,
+},
+
+header: {
+  fontSize: 22,
+  fontWeight: '700',
+  color: '#172033',
+  marginBottom: 5,
+},
+
+subtitle: {
+  fontSize: 13,
+  color: '#7B8494',
+},
+
+publishButton: {
+  backgroundColor: '#2563EB',
+  paddingVertical: 11,
+  paddingHorizontal: 14,
+  borderRadius: 9,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+publishButtonText: {
+  color: '#FFFFFF',
+  fontSize: 13,
+  fontWeight: '700',
+},
 });

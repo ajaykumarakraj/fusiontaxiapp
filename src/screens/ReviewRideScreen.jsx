@@ -182,7 +182,7 @@ estimated_duration_second:rideData.duration_seconds
         [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Your Rides'),
+            onPress: () => navigation.navigate('PublishSuccess'),
              
           },
         ],

@@ -19,13 +19,15 @@ const API_BASE = 'https://api.squarebigha.com/oldApi/api/v1';
 
 const RideDetails = ({ route }) => {
   const navigation = useNavigation();
-  const { ride, from, to } = route.params;
+  const { ride,persons } = route.params;
 const [showStops, setShowStops] = useState(false);
 const [showPreferences, setShowPreferences] = useState(false);
   const [rideDetail, setRideDetail] = useState(null);
   const [loading, setLoading] = useState(true);
 
+// console.log("ride details",ride,persons)
 
+console.log("get data",rideDetail)
 const formatDuration = (seconds) => {
   if (seconds == null || isNaN(seconds)) {
     return 'N/A';
@@ -43,7 +45,7 @@ const formatDuration = (seconds) => {
 const booking=async()=>{
 
 try {
-  console.log("run tha code")
+  // console.log("run tha code")
   const credentials = await Keychain.getGenericPassword();
   
       if (!credentials) {
@@ -54,18 +56,23 @@ try {
       const token = credentials.password;
    const   payload={
 
-    seats_requested: 2,
-    pickup_stop_id: 3,
-    dropoff_stop_id: 4,
+    seats_requested: persons,
+    pickup_stop_id: rideDetail.pickup_stop_id,
+    dropoff_stop_id: rideDetail.dropoff_stop_id,
     passenger_note: "I have one small bag."
 
       }
+      console.log("post data",payload)
   const res=await axios.post(`https://api.squarebigha.com/oldApi/api/v1/rides/${ride.uuid}/book`,payload,{
     headers:{
       Authorization:`Bearer ${token}`
     }
   })
+  if(res.data.success){
+    navigation.navigate('Home')
   console.log("response",res.data)
+  }
+
 } catch (error) {
   console.log(error)
 }
@@ -95,8 +102,7 @@ try {
 
       if (res.data?.success && res.data?.data) {
         setRideDetail(res.data.data);
-      } else if (res.data?.data) {
-        setRideDetail(res.data.data);
+     
       } else {
         Alert.alert('Error', 'Ride details not found.');
       }
@@ -183,7 +189,7 @@ console.log("rideDetail",rideDetail)
         <View style={{ width: 25 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.bottom}>
         {/* Driver */}
         <View style={styles.card}>
           <View style={styles.driverRow}>
@@ -255,47 +261,7 @@ console.log("rideDetail",rideDetail)
       
        
 
-        {/* Stops */}
-        {stops.length > 0 && (
-  <View style={styles.card}>
-    <TouchableOpacity
-      style={styles.stopsHeader}
-      onPress={() => setShowStops(!showStops)}
-      activeOpacity={0.7}
-    >
-      <Text style={styles.sectionTitle}>
-        Route Stops ({stops.length})
-      </Text>
-
-      <Icon
-        name={showStops ? 'chevron-up-outline' : 'chevron-down-outline'}
-        size={22}
-        color="#333"
-      />
-    </TouchableOpacity>
-
-    {showStops &&
-      stops.map((stop, index) => (
-        <View style={styles.stopRow} key={stop.id ?? index}>
-          <Icon
-            name="location-outline"
-            size={20}
-            color="#f40b0f"
-          />
-
-          <View style={{ flex: 1 }}>
-            <Text style={styles.value}>
-              Stop {index + 1}
-            </Text>
-
-            <Text style={styles.stopAddress}>
-              {stop.address || 'Address not available'}
-            </Text>
-          </View>
-        </View>
-      ))}
-  </View>
-)}
+     
 
         {/* Vehicle */}
         <View style={styles.card}>
@@ -354,35 +320,41 @@ console.log("rideDetail",rideDetail)
     <Text style={styles.perSeat}> / seat</Text>
   </Text>
 
-  <View style={styles.fareGrid}>
+<View style={styles.fareGrid}>
+  {rideDetail.total_distance_km != null && (
     <View style={styles.fareItem}>
-          {rideDetail.total_distance_km != null && (
-            <InfoRow
-              icon="navigate-outline"
-              label="Distance"
-              value={`${rideDetail.total_distance_km} km`}
-            />
-          )}
-          <InfoRow
-          icon="time-outline"
-           label="Estimated Duration"
-         value={formatDuration(rideDetail.estimated_duration_second)}
-        />
       <InfoRow
-        icon="people-outline"
-        label="Available Seats"
-        value={rideDetail.available_seats ?? 'N/A'}
-      />
-      <InfoRow
-        icon="card-outline"
-        label="Booking Type"
-        value={rideDetail.booking_type || 'N/A'}
+        icon="navigate-outline"
+        label="Distance"
+        value={`${rideDetail.total_distance_km} km`}
       />
     </View>
+  )}
 
-
-  
+  <View style={styles.fareItem}>
+    <InfoRow
+      icon="time-outline"
+      label="Estimated Duration"
+      value={formatDuration(rideDetail.estimated_duration_second)}
+    />
   </View>
+
+  <View style={styles.fareItem}>
+    <InfoRow
+      icon="people-outline"
+      label="Available Seats"
+      value={rideDetail.available_seats ?? 'N/A'}
+    />
+  </View>
+
+  <View style={styles.fareItem}>
+    <InfoRow
+      icon="card-outline"
+      label="Booking Type"
+      value={rideDetail.booking_type || 'N/A'}
+    />
+  </View>
+</View>
 </View>
 
         {/* Preferences */}
@@ -430,10 +402,50 @@ console.log("rideDetail",rideDetail)
     </>
   )}
 </View>
+   {/* Stops */}
+        {stops.length > 0 && (
+  <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.stopsHeader}
+      onPress={() => setShowStops(!showStops)}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.sectionTitle}>
+        Route Stops ({stops.length})
+      </Text>
 
+      <Icon
+        name={showStops ? 'chevron-up-outline' : 'chevron-down-outline'}
+        size={22}
+        color="#333"
+      />
+    </TouchableOpacity>
+
+    {showStops &&
+      stops.map((stop, index) => (
+        <View style={styles.stopRow} key={stop.id ?? index}>
+          <Icon
+            name="location-outline"
+            size={20}
+            color="#f40b0f"
+          />
+
+          <View style={{ flex: 1 }}>
+            <Text style={styles.value}>
+              Stop {index + 1}
+            </Text>
+
+            <Text style={styles.stopAddress}>
+              {stop.address || 'Address not available'}
+            </Text>
+          </View>
+        </View>
+      ))}
+  </View>
+)}
 
         {/* Driver info */}
-        <View style={styles.card}>
+        {/* <View style={styles.card}>
           <Text style={styles.sectionTitle}>Driver Information</Text>
 
           <InfoRow
@@ -447,28 +459,31 @@ console.log("rideDetail",rideDetail)
             label="Email"
             value={driver.email}
           />
-        </View>
+        </View> */}
 
-        <TouchableOpacity
-          style={styles.bookBtn}
-          activeOpacity={0.8}
-         onPress={() => {
-  Alert.alert(
-    'Book Ride',
-    'Do you want to book this ride?',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: () => booking(),
-      },
-    ],
-  );
-}}>
-          <Text style={styles.bookText}>Book Ride</Text>
-          <Icon name="arrow-forward" size={20} color="#fff" />
-        </TouchableOpacity>
       </ScrollView>
+      <View style={styles.bottomButtonContainer}>
+  <TouchableOpacity
+    style={styles.bookBtn}
+    activeOpacity={0.8}
+    onPress={() => {
+      Alert.alert(
+        'Book Ride',
+        'Do you want to book this ride?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Confirm',
+            onPress: () => booking(),
+          },
+        ],
+      );
+    }}
+  >
+    <Text style={styles.bookText}>Book Ride</Text>
+    <Icon name="arrow-forward" size={20} color="#fff" />
+  </TouchableOpacity>
+     </View>
     </View>
   );
 };
@@ -480,6 +495,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f6f8',
     paddingHorizontal: 16,
+  
   },
   center: {
     flex: 1,
@@ -624,11 +640,34 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 25,
   },
-  bookText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+ bottomButtonContainer: {
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  paddingHorizontal: 16,
+  paddingTop: 12,
+  paddingBottom: 25,
+  backgroundColor: '#fff',
+  elevation: 10,
+  zIndex: 999,
+},
+
+bookBtn: {
+  height: 52,
+  backgroundColor: '#007bff',
+  borderRadius: 12,
+  flexDirection: 'row',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: 8,
+},
+
+bookText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: '700',
+},
  journeydate: {
   flexDirection: 'row',
   justifyContent: 'space-between',
@@ -664,14 +703,14 @@ vehicleItem: {
 fareGrid: {
   flexDirection: 'row',
   flexWrap: 'wrap',
-  marginHorizontal: -4,
+  marginHorizontal: -6,
 },
 
 fareItem: {
   width: '50%',
-  paddingHorizontal: 4,
+  paddingHorizontal: 6,
+  marginBottom: 16,
 },
-
 
 
 sectionTitle: {
@@ -690,5 +729,8 @@ preferencesHeader:{
   display:"flex",
   flexDirection:"row",
   justifyContent:"space-between"
+},
+bottom:{
+  marginBottom:80
 }
 });
