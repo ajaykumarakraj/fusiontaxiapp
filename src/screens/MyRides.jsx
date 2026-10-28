@@ -83,76 +83,7 @@ console.log("ridesData",ridesData)
       getRides();
     }, [])
   );
-  // const handleEdit = item => {
-  //   console.log('Edit ride:', item);
 
-  //   Alert.alert(
-  //     'Edit Ride',
-  //     `Ride ID: ${item.id}\nEdit screen ko yahan connect karein.`
-  //   );
-  // };
-
-// const handlePublish = (item) => {
-//   Alert.alert(
-//     'Publish Ride',
-//     `Kya aap ride #${item.id} publish karna chahte hain?`,
-//     [
-//       {
-//         text: 'No',
-//         style: 'cancel',
-//       },
-//       {
-//         text: 'Yes, Publish',
-//         onPress: async () => {
-//           try {
-//             const credentials = await Keychain.getGenericPassword();
-
-//             if (!credentials || !credentials.password) {
-//               Alert.alert(
-//                 'Authentication Error',
-//                 'Please login again.'
-//               );
-//               return;
-//             }
-
-//             const response = await axios.post(
-//               `https://api.squarebigha.com/oldApi/api/v1/rides/${item.uuid}/publish`,
-//               {},
-//               {
-//                 headers: {
-//                   Authorization: `Bearer ${credentials.password}`,
-//                   Accept: 'application/json',
-//                   'Content-Type': 'application/json',
-//                 },
-//               }
-//             );
-
-//             console.log('Publish response:', response.data);
-
-//             Alert.alert(
-//               'Success',
-//               response.data?.message || 'Ride published successfully.'
-//             );
-
-//             await getRides();
-//           } catch (error) {
-//             console.log(
-//               'Publish API error:',
-//               error.response?.status,
-//               error.response?.data || error.message
-//             );
-
-//             Alert.alert(
-//               'Error',
-//               error.response?.data?.message ||
-//                 'Ride publish nahi ho payi. Please try again.'
-//             );
-//           }
-//         },
-//       },
-//     ]
-//   );
-// };
 
   const handleCancel = (item) => {
   Alert.alert(
@@ -300,15 +231,17 @@ console.log("ridesData",ridesData)
     
       0;
 
-   
+   console.log("item",item)
 
     return (
       <TouchableOpacity
   style={styles.card}
   activeOpacity={0.8}
-  onPress={() => {
-    navigation.navigate('RidePlane', {
-      ride: item,
+    onPress={() => {
+    console.log('Selected booking:', item);
+
+    navigation.navigate('Myridelistdetails', {
+      ride: item.ride,
     });
   }}
 >

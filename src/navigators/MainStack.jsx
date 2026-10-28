@@ -23,11 +23,14 @@ import SelectCarScreen from '../screens/SelectCars'
 // import PublishRides from '../screens/PublishRides'
 import HelpSupportScreen from "../screens/HelpSupportScreen"
 import TermsConditions from "../screens/TermsConditionsScreen"
-import RidePlaneScreen from "../screens/RidePlanScreen"
+import Publishlistdetails from "../screens/Publishlistdetails"
 import CustomerDetailsScreen from "../screens/CustomerDetailsScreen"
 import ChatScreen from "../screens/ChatScreen"
-import PublishScreen from "../screens/PublishScreen"
+import NewPublishScreen from "../screens/NewPublishScreen"
 import PublishSuccess from "../screens/PublishSuccessScreen"
+// import myridelistdetails from "../screens/myridelistdetails"
+import New from "../screens/New"
+import Myridelistdetails from '../screens/Myridelistdetails'
 const Stack=createNativeStackNavigator()
 const MainStack = () => {
   return (
@@ -54,11 +57,13 @@ const MainStack = () => {
         {/* <Stack.Screen name="PublishRides" component={PublishRides}/> */}
         <Stack.Screen name="HelpSupport" component={HelpSupportScreen}/>
         <Stack.Screen name="TermsConditions" component={TermsConditions}/>
-        <Stack.Screen name='RidePlane' component={RidePlaneScreen}/>
+        <Stack.Screen name='Publishlistdetails' component={Publishlistdetails}/>
         <Stack.Screen name="CustomerDetails" component={CustomerDetailsScreen}/>
         <Stack.Screen name="ChatScreen" component={ChatScreen}/>
-        <Stack.Screen name="NewPublishScreen" component={PublishScreen}/>
+        <Stack.Screen name="NewPublishScreen" component={NewPublishScreen}/>
         <Stack.Screen name="PublishSuccess" component={PublishSuccess}/>
+<Stack.Screen name="Myridelistdetails" component={Myridelistdetails}/>
+<Stack.Screen name='new' component={New}/>
        
      </Stack.Navigator>
   )

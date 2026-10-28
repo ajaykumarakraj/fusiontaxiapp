@@ -65,7 +65,8 @@ const handleGoogleLogin = async () => {
     const payload = {
       access_token: tokens.accessToken,
       provider: 'google',
-    };
+      auth_type:"mobile"
+    }; 
 
     const response = await axios.post(
       'https://api.squarebigha.com/oldApi/api/v1/auth/social-login',

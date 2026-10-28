@@ -11,7 +11,7 @@ import {
 import Icon from "react-native-vector-icons/Ionicons";
 import axios from "axios";
 
-const PickupCityScreen = ({ navigation, route }) => {
+const NewPublishScreen = ({ navigation, route }) => {
   const value = route?.params?.value || "";
 
   const [query, setQuery] = useState(
@@ -247,7 +247,7 @@ console.log("location",location.formatted_address,location.latitude,location.lon
   );
 };
 
-export default PickupCityScreen;
+export default NewPublishScreen;
 
 const styles = StyleSheet.create({
   container: {

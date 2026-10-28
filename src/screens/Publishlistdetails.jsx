@@ -1,5 +1,6 @@
 
-import React from 'react';
+import axios from 'axios';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +9,8 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+
+import * as Keychain from 'react-native-keychain';
 
 
 const customers = [
@@ -28,8 +31,36 @@ const customers = [
     bookingId: 'BK102',
   },
 ];
-const RidePlanScreen = ({ navigation, route }) => {
+const Publishlistdetails = ({ navigation, route }) => {
   const ride = route?.params?.ride || {};
+
+  console.log("ride data",ride)
+
+useEffect(()=>{
+  getpassenger()
+},[])
+const getpassenger=async()=>{
+  try {
+      const credentials = await Keychain.getGenericPassword();
+    
+          if (!credentials || !credentials.password) {
+            setError('Authentication token nahi mila. Please login again.');
+            setRidesData([]);
+            return;
+          }
+    const res=await axios.get(`https://api.squarebigha.com/oldApi/api/v1/rides/${ride.uuid}/bookings`,{
+      headers:{
+        Authorization: `Bearer ${credentials.password}`,
+      }
+    })
+
+    console.log("response",res.data.data.data)
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+
 // const [selectedCustomer, setSelectedCustomer] = React.useState(null);
   // Route details
   const pickup =
@@ -58,12 +89,6 @@ const RidePlanScreen = ({ navigation, route }) => {
     ride.time ||
     ride.ride_time ||
     'Not available';
-
-  
-
-
- 
-  
 
   // Booking and pricing
   const pricePerSeat = Number(
@@ -240,7 +265,7 @@ const formattedDate = formatRideDate(date);
   );
 };
 
-export default RidePlanScreen;
+export default Publishlistdetails;
 
 const styles = StyleSheet.create({
   container: {
